@@ -1052,14 +1052,68 @@ DAYS = [
 ]
 
 
+# System Design problems on specific Saturdays (1 hr in 5-hr block)
+SD_PROBLEMS = {
+    41: ("Design URL shortener (warmup)", "Generic"),
+    47: ("Design Twitter / Instagram feed", "Generic"),
+    53: ("Design Uber / ride matching", "Generic"),
+    59: ("Design Slack / messaging system", "Generic"),
+    65: ("Design payment processor", "Fintech"),
+    71: ("Design RAG system at scale (10M docs)", "LLM"),
+    77: ("Design distributed cache", "Generic"),
+    83: ("Design AI customer support system", "LLM"),
+    89: ("Design real-time fraud detection", "Fintech"),
+    95: ("Design eval pipeline for LLM apps", "LLM"),
+    101: ("Design transaction processing (1M TPS)", "Fintech"),
+    107: ("Design multi-tenant LLM gateway", "LLM"),
+    113: ("Design recommendation system", "Generic"),
+    119: ("Design notification system", "Generic"),
+    125: ("Design agent orchestration system", "LLM"),
+    131: ("Design backtesting infrastructure", "Fintech"),
+    137: ("Design reconciliation pipeline", "Fintech"),
+    143: ("Real 45-min mock SD interview", "Mock"),
+}
+
+# DDIA chapters every OTHER Sunday
+DDIA_DAYS = {
+    12: "Ch 1 — Reliable, Scalable, Maintainable Apps",
+    24: "Ch 2 — Data Models & Query Languages",
+    36: "Ch 3 — Storage & Retrieval",
+    48: "Ch 4 — Encoding & Evolution",
+    60: "Ch 5 — Replication",
+    72: "Ch 6 — Partitioning",
+    84: "Ch 7 — Transactions",
+    96: "Ch 8 — Trouble with Distributed Systems",
+    108: "Ch 9 — Consistency & Consensus",
+    120: "Ch 10 — Batch Processing",
+    132: "Ch 11 — Stream Processing",
+    144: "Ch 12 — The Future of Data Systems",
+}
+
+
 def render(day):
     num, dow, phase, project, hours, tasks, resources, deliverable, cadences = day
     title = tasks[0].lstrip("*").strip() if tasks else ""
-    # Try to extract a short title from project or first task
     short_title = project if project else f"Day {num}"
+
+    # Inject SD problem if Saturday is in SD_PROBLEMS
+    sd_problem = SD_PROBLEMS.get(num)
+    ddia_chapter = DDIA_DAYS.get(num)
 
     md = f"# Day {num:03d} — {short_title}\n\n"
     md += f"**Phase:** {phase} | **Project:** {project} | **Hours:** {hours} | **Day:** {dow}\n\n"
+
+    if sd_problem:
+        md += f"## 🏗️ System Design (1 hr — first hour of Saturday block)\n"
+        md += f"- **Problem ({sd_problem[1]}):** {sd_problem[0]}\n"
+        md += f"- Resources: ByteByteGo, Hello Interview YouTube, system-design-primer\n"
+        md += f"- Deliverable: 1-page design doc in `notes/system-design/sd-day{num:03d}.md`\n\n"
+
+    if ddia_chapter:
+        md += f"## 📚 DDIA Reading (30 min — Sunday block)\n"
+        md += f"- {ddia_chapter}\n"
+        md += f"- Notes in `notes/ddia.md`\n\n"
+
     md += "## Today\n"
     for t in tasks:
         md += f"- {t}\n"
@@ -1078,6 +1132,10 @@ def render(day):
         md += "\n"
     md += "## Done?\n"
     md += "- [ ] All tasks complete\n"
+    if sd_problem:
+        md += "- [ ] System design problem solved + design doc written\n"
+    if ddia_chapter:
+        md += "- [ ] DDIA chapter read + notes\n"
     md += f"- [ ] tracker/days/day-{num:03d}.md filled\n"
     md += "- [ ] Tomorrow's first task pre-decided\n\n"
     md += f"📍 [CURRICULUM.md](../CURRICULUM.md) Day {num}\n"

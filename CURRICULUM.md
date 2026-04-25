@@ -131,6 +131,21 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 ### Mock interviews
 - Day 80, 110, 140
 
+### System design (NEW — critical for senior-level offers)
+- **Saturday integration:** 1 hr SD problem in Saturday's 5-hr block (first hour, then project work)
+- **Sunday DDIA reading:** 30 min every OTHER Sunday (12 sessions = 12 chapters by Day 144)
+- **Total:** 18 SD problems + DDIA book completed by Day 150
+- **Mix:** 6 generic, 6 LLM-specific, 6 fintech-specific
+- **Project ARCHITECTURE.md docs:** each of 5 projects ships w/ formal SD doc (interview-ready answers)
+- **Phase 6 deep dive (Days 127-130):** dedicated LLM SD prep
+- **Resources:**
+  - "Designing Data-Intensive Applications" by Martin Kleppmann — $30, paper copy recommended
+  - ByteByteGo newsletter — free
+  - github.com/donnemartin/system-design-primer — free
+  - Hello Interview YouTube — free, modern + AI focused
+  - chiphuyen.com — ML system design
+  - Anthropic engineering blog — production LLM patterns
+
 ---
 
 # PHASE 1: Speedrun Foundations + User Research (Days 1-12, 2 weeks)
@@ -1049,7 +1064,8 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 | CA consultation (India tax) | $30 | Pre-offer setup |
 | YC application | $0 | Free to apply |
 | Buffer | $15 | Extra compute, vector DB scaling |
-| **Total** | **$200** | (slight stretch but Claude Pro saved $120) |
+| DDIA book (system design bible) | $30 | Saturday SD reading — required for senior offers |
+| **Total** | **$230** | (Claude Pro saved $120, SD book +$30) |
 
 ## Free Resources
 

@@ -161,6 +161,63 @@ Keep: blog #1, #2, #3, #4, #5, #7, #8 (7 total).
 
 ---
 
+## 🟢 Bonus Addition: System Design Track (added per review)
+
+**Why:** Senior-level (5+ yrs experience) AI Engineer roles weight system design 30-40% of interview signal. Without it, you cap at junior offers ($90-130K) instead of senior ($160-220K). This is the single biggest leverage gap in the original plan.
+
+### Integration (low overhead, high impact)
+
+**Saturday block (already 5 hrs):**
+- Hour 1: System design problem (1 hr)
+- Hours 2-5: Project work (was 5 hrs, now 4)
+
+**Sunday block (already 2 hrs):**
+- 30 min DDIA reading every OTHER Sunday (alternates with Damodaran)
+
+**Per project:**
+- Ship `ARCHITECTURE.md` design doc alongside README
+- Format: real SD interview answer (requirements, scale, components, tradeoffs, future)
+
+### 18 SD problems (specific schedule)
+
+| Day | Problem | Type |
+|-----|---------|------|
+| 41 | Design URL shortener | Generic warmup |
+| 47 | Design Twitter feed | Generic |
+| 53 | Design Uber / ride matching | Generic |
+| 59 | Design Slack / messaging | Generic |
+| 65 | Design payment processor | Fintech |
+| 71 | **Design RAG system at scale (10M docs)** | LLM |
+| 77 | Design distributed cache | Generic |
+| 83 | **Design AI customer support system** | LLM |
+| 89 | Design real-time fraud detection | Fintech |
+| 95 | **Design eval pipeline for LLM** | LLM |
+| 101 | Design transaction processing (1M TPS) | Fintech |
+| 107 | **Design multi-tenant LLM gateway** | LLM |
+| 113 | Design recommendation system | Generic |
+| 119 | Design notification system | Generic |
+| 125 | **Design agent orchestration system** | LLM |
+| 131 | Design backtesting infrastructure | Fintech |
+| 137 | Design reconciliation pipeline | Fintech |
+| 143 | **Real 45-min mock SD interview** | All |
+
+### DDIA reading schedule (12 chapters)
+
+Every OTHER Sunday: Days 12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 132, 144
+
+### Cost
+- DDIA book: $30 (add to budget)
+- Time: 1 hr/Saturday + 30 min every other Sunday = ~25 hrs over 150 days
+
+### Expected outcome
+- 18 SD problems practiced
+- 5 ARCHITECTURE.md docs in portfolio
+- DDIA completed
+- Offer ceiling raised by ~30-40%
+- Senior-level interview pass rate dramatically up
+
+---
+
 ## 🛡️ Risk Mitigations Added
 
 ### Burnout prevention (Months 3-4 zone)
