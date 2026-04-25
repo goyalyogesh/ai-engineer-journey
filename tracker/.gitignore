@@ -1,0 +1,23 @@
+# Private files
+*.private.md
+secrets/
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Python (in case scripts added)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (if any tracker scripts use it)
+node_modules/
