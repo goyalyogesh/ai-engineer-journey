@@ -6,18 +6,22 @@
 
 ## 🟢 Top 5 Additions
 
-### 1. `.cursorrules` template (HUGEST productivity multiplier)
+### 1. `CLAUDE.md` template (HUGEST productivity multiplier)
 
 **Setup once before Day 1.** Save 30 min/day forever.
 
-Create `.cursorrules` in each project root:
+**Stack note:** Using VS Code + Claude Code (Claude Pro subscription) instead of Cursor. Claude Code reads `CLAUDE.md` from project root for context. Same concept as `.cursorrules`, different filename.
+
+Create `CLAUDE.md` in each project root:
 
 ```
+# Project context for Claude Code
+
 You are pair-programming with a .NET dev learning Python AI.
 
 Tech stack:
 - Python 3.12, type hints everywhere, Pydantic v2, async by default
-- uv (not pip), Cursor (not VS Code)
+- uv (not pip), VS Code as editor
 - LangChain primary, Instructor for structured output
 - LangSmith for tracing, Ragas for evals
 - FastAPI backend, Streamlit demos, Next.js production
@@ -38,6 +42,10 @@ Anti-patterns:
 ```
 
 **Add to pre-flight:** copy template to each new project repo Day 1 of project.
+
+**Bonus — if you also want VS Code inline AI completions** (optional):
+- Add Cline extension (free, BYOK Anthropic API) — uses your $30 API credits
+- Or skip — Claude Code in terminal handles most coding tasks already
 
 ---
 
@@ -185,7 +193,9 @@ Backup plans:
 
 ## 📋 Application Checklist (do during pre-flight)
 
-- [ ] `.cursorrules` template saved as snippet
+- [ ] VS Code installed + Claude Code CLI installed (`npm install -g @anthropic-ai/claude-code`)
+- [ ] `claude login` done (uses Claude Pro subscription)
+- [ ] `CLAUDE.md` template saved as snippet
 - [ ] `python-ai-starter` template repo created (Day 13 ideally)
 - [ ] Family/partner conversation completed + agreement documented
 - [ ] Personal site live with placeholder

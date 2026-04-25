@@ -15,6 +15,7 @@
 - **Stack preference:** **Python only** going forward (no C#/.NET in AI work)
 - **LLMs:** **API-based only** (OpenAI, Anthropic) — no local LLM hosting
 - **Hardware:** Mac mini (primary dev), VPS (Project 5 hosting), Windows laptop, owned domains
+- **AI dev stack:** **VS Code + Claude Code (terminal) + Claude.ai web** (Claude Pro subscription)
 
 ## What this project is
 
@@ -89,8 +90,8 @@ ai-engineer/
 
 - **Language:** Python 3.12 (only)
 - **Package mgr:** uv (not pip)
-- **IDE:** Cursor (not VS Code)
-- **LLMs:** OpenAI + Anthropic (API only)
+- **IDE:** VS Code + Claude Code (terminal agentic coding via Claude Pro subscription)
+- **LLMs:** OpenAI + Anthropic (API only for production projects)
 - **Frameworks:** LangChain primary, LlamaIndex secondary
 - **Validation:** Pydantic v2, Instructor
 - **Backend:** FastAPI
@@ -169,8 +170,9 @@ $180 total over 150 days:
 - US remote + Hyderabad GCC + Indian fintech targeting
 - 15 hrs/week schedule
 - 150-day timeline
-- Cursor as IDE
+- VS Code + Claude Code as IDE/AI stack
 - LangChain as primary framework
+- Claude Pro subscription (already paid) covers AI assistant needs
 
 If I'm reconsidering one of these, I'll explicitly say so.
 

@@ -71,7 +71,10 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 ## Toolchain
 
 ### Dev environment
-- **IDE:** Cursor
+- **IDE:** VS Code (free)
+- **AI assistant:** Claude Code CLI (terminal, via Claude Pro subscription)
+- **AI web chat:** Claude.ai (Pro included — for learning, brainstorming, blog drafts)
+- **Optional inline completions:** Cline extension (VS Code, BYOK Anthropic API)
 - **Terminal:** iTerm2 + Oh My Zsh
 - **Python:** 3.12 via Homebrew
 - **Package manager:** `uv`
@@ -137,12 +140,14 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 ## Week 1 — Setup + Build
 
 ### Day 1 (Mon): Install everything + first LLM call SAME DAY
-- Install Homebrew, Python 3.12, uv, Git, Cursor — 30 min
+- Install Homebrew, Python 3.12, uv, Git, VS Code, Node — 30 min
+- Install Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
+- `claude login` (uses Claude Pro subscription)
 - Create GitHub repo `ai-engineer-journey`
-- $30 OpenAI + $30 Anthropic credits topped up
+- $30 OpenAI + $30 Anthropic API credits topped up
 - First OpenAI chat completion working
 - **Build-in-public:** LinkedIn post "Day 1 of AI Engineer transition. First Claude API call live."
-- **Resource:** platform.openai.com/docs/quickstart
+- **Resource:** platform.openai.com/docs/quickstart, docs.anthropic.com/en/docs/claude-code
 
 ### Day 2 (Tue): Python idioms in 2 hrs
 - For .NET dev: list/dict comprehensions, f-strings, type hints, async, virtual envs
@@ -1027,22 +1032,24 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 
 # Resource Hub
 
-## Paid Spend Plan ($180 budget)
+## Paid Spend Plan ($180 budget — revised w/ Claude Pro savings)
 
 | Item | Cost | Why |
 |------|------|-----|
+| Claude Pro (already paying) | $0 extra | Includes Claude Code + claude.ai |
+| Cursor Pro | $0 (skipped) | Saved $120 — Claude Code covers it |
 | OpenAI API credits | $30 | All projects |
-| Anthropic API credits | $30 | All projects |
+| Anthropic API credits | $50 (was $30) | More for production projects (Claude Pro doesn't cover API) |
 | Pinecone | $0 | Free tier |
 | Render or replacement | $25 | P1 + P2 backend |
-| Razorpay (no fee, transaction-based) | $0 | P5 monetization |
-| DeepLearning.AI Plus (optional) | $40 | Most courses free anyway |
+| Razorpay | $0 | Transaction-based, no fee |
+| DeepLearning.AI Plus (optional) | $40 | Most courses free |
 | LangSmith free tier | $0 | Free for personal |
 | Resend overage | $10 | If P5 grows beyond free |
 | CA consultation (India tax) | $30 | Pre-offer setup |
 | YC application | $0 | Free to apply |
-| Buffer | $15 | Vector DB, extra compute |
-| **Total** | **$180** | |
+| Buffer | $15 | Extra compute, vector DB scaling |
+| **Total** | **$200** | (slight stretch but Claude Pro saved $120) |
 
 ## Free Resources
 
