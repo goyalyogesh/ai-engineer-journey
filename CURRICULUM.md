@@ -131,6 +131,16 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 ### Mock interviews
 - Day 80, 110, 140
 
+### YouTube (lean — adds 2 hrs/wk max, starts Day 30)
+- **Channel:** https://www.youtube.com/@ai-engineer-journey
+- **Cadence:** Wed (system design walkthrough, 10 min) + Sat (project demo / vlog, 5-10 min)
+- **Format rules:** Loom-style raw screen-share, no editing beyond trim, OBS for streams
+- **Don't:** polished long-form, daily uploads, reactions
+- **Do:** repurpose project demos, SD problems, blog post summaries
+- **Equipment budget:** $150 (webcam, mic, ring light if needed)
+- **Tracking:** subs/views in `tracker/metrics/youtube.csv`
+- **Detailed plan:** `tracker/templates/youtube-plan.md`
+
 ### System design (NEW — critical for senior-level offers)
 - **Saturday integration:** 1 hr SD problem in Saturday's 5-hr block (first hour, then project work)
 - **Sunday DDIA reading:** 30 min every OTHER Sunday (12 sessions = 12 chapters by Day 144)

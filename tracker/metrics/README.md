@@ -9,6 +9,7 @@ Track weekly. Update CSVs every Sunday during weekly review.
 - `project5.csv` — signups, paying users, MRR, churn
 - `applications.csv` — apps sent, responses, interviews
 - `content.csv` — blog views, X followers
+- `youtube.csv` — channel subs, views, recruiter inbound
 
 ## Quick view targets (from CURRICULUM.md)
 
