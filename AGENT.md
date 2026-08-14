@@ -95,26 +95,29 @@ ai-engineer/
 - **Frameworks:** LangChain primary, LlamaIndex secondary
 - **Validation:** Pydantic v2, Instructor
 - **Backend:** FastAPI
-- **Frontend:** Streamlit (demos), Next.js (production)
+- **Frontend:** Streamlit (demos), Next.js (production) — React.js depth (hooks, Redux Toolkit, redux-observable, React Testing Library) built deliberately, not just incidentally via Next.js
 - **Vector DB:** Chroma local, Pinecone production
 - **Relational DB:** PostgreSQL via Supabase or VPS
 - **Cache:** Upstash Redis
-- **Observability:** LangSmith, Ragas
-- **Deploy:** HF Spaces (fast), Render (backend), Vercel (frontend), own VPS (P5)
+- **Observability:** LangSmith, Ragas + real CI/CD (GitHub Actions), structured logging, alerting, LLM cost dashboards (Day 106) — not just a starter-template checkbox
+- **Deploy:** HF Spaces (fast), Render (backend), Vercel (frontend), **Azure Container Apps** (Project 2 — matches enterprise/bank JD stacks), own VPS (P5)
 
-## Schedule (locked)
+## Schedule (locked — v3 two-speed pacing, see `CURRICULUM.md`)
+
+**Trigger:** current job ends in 3-4 months. Job search takes 60-90 days once started — so it's resequenced to start Day 61 (parallel with building), not Day 118. See `CURRICULUM.md` v3 Changes section for full rationale.
+
+**Days 1-104 (while employed) — 20 hrs/week:**
 
 | Day | Time | Hours |
 |-----|------|-------|
-| Mon | 7:30-9:30 PM | 2 |
-| Tue | 7:30-9:30 PM | 2 |
-| Wed | 7:30-9:30 PM | 2 |
-| Thu | 7:30-9:30 PM | 2 |
+| Mon-Thu | Evenings | 2.5 each |
 | Fri | OFF | 0 |
-| Sat | 9 AM-2 PM | 5 |
-| Sun | 10 AM-12 PM | 2 (Sunday block: writing + finance + planning) |
+| Sat | Deep work | 7 |
+| Sun | Sunday block | 3 |
 
-**Total: 15 hrs/week × 25 weeks = 150 working days = ~6 months**
+**Days 105-150 (after job ends) — full-time pace, no fixed hours, target 30-40 hrs/wk, compresses remaining ~46 days into 4-6 weeks instead of 8.**
+
+**Total content: still 150 days, no topics cut** — only re-paced and resequenced. Original 15 hrs/wk × 25 weeks assumption superseded by the above.
 
 ## Budget
 
@@ -168,8 +171,9 @@ $180 total over 150 days:
 - Fintech AI niche (not legal, healthcare, etc.)
 - B2B primary + 1 B2C side (Project 5)
 - US remote + Hyderabad GCC + Indian fintech targeting
-- 15 hrs/week schedule
-- 150-day timeline
+- 150 days of content — unchanged, no topics cut
+- **Two-speed pacing (v3):** 20 hrs/wk Days 1-104 (employed), full-time pace Days 105-150 (post-employment) — see `CURRICULUM.md`. Superseded the flat 15 hrs/wk assumption once the job-end date (3-4 months out) became known.
+- Job search starts Day 61 (light cadence), not Day 118 — resequenced to avoid an employment gap
 - VS Code + Claude Code as IDE/AI stack
 - LangChain as primary framework
 - Claude Pro subscription (already paid) covers AI assistant needs

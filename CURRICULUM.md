@@ -1,10 +1,11 @@
-# AI Engineer 150-Day Curriculum — Fintech AI Track (v2 — Hybrid Musk/Altman)
+# AI Engineer 150-Day Curriculum — Fintech AI Track (v3 — Two-Speed Pacing)
 
 **Target:** .NET → AI Engineer (Fintech focus)
 **Profile:** Canadian citizen, Indian heritage, planning Hyderabad relocation
-**Schedule:** 15 hrs/week, 6 working days (Mon-Thu + Sat + Sun, Fri OFF)
-**Duration:** 150 working days = 25 weeks ≈ 6 months
-**Stack:** Python only, API-based LLMs (no local LLM)
+**Schedule:** Two-speed — 20 hrs/week while employed (Days 1-104), full-time pace after current job ends (Days 105-150)
+**Duration:** 150 days of content, unchanged — no topics cut. Employed-phase target: Days 1-104 by ~13 weeks (conservative checkpoint ahead of job end)
+**Stack:** Python only, API-based LLMs (no local LLM). Azure added for the enterprise-track project.
+**Driver:** Current job ends in 3-4 months — plan resequenced so job search runs parallel with building, not after (see v3 Changes below)
 
 ## v2 Changes (vs v1)
 1. **Phase 1 compressed 25 → 12 days** — Python is fast for .NET dev. Stop padding intro days.
@@ -13,33 +14,54 @@
 4. **Content cadence 3x** — 3 LinkedIn/wk from Day 30, daily X from Day 50
 5. **YC application Day 100** — even if you take a job, the app forces clarity
 
+## v3 Changes (Job-Ready Before Job Ends — vs v2)
+
+**Trigger:** current job ends in 3-4 months. Job search takes 60-90 days once started (see `ReadMe.md`). Starting applications at Day 118 (original Phase 6) leaves near-zero overlap with employment — that's a built-in 2-3 month gap. Fixed with:
+
+1. **Two-speed pacing, not a flat 90-day squeeze.** Days 1-104 run at ~20 hrs/week (up from 15) while still employed — Mon-Thu 2.5 hrs, Sat 7 hrs, Sun 3 hrs. Days 105-150 shift to full-time pace once the job ends (no fixed hours — driven by actual availability, likely 30-40 hrs/wk, compressing the remaining ~46 days into 4-6 calendar weeks instead of 8). No topics cut — same 150 days of content, just resequenced and re-paced.
+2. **Job search resequenced earlier — Day 61, not Day 118.** Light application cadence (5-8/wk, best-fit roles first) starts alongside Project 2's eval suite, runs parallel through Phases 3-5. Phase 6 (Days 118-150) becomes an intensification of an already-warm pipeline, not a cold start.
+3. **Azure added to Project 2's deploy target** (Day 62, swapped from Render). Both JDs sourced during this planning round (AI/ML Engineer @ Cynet, GenAI Full Stack @ Hexaware/Citi) list Azure as preferred/required — enterprise Canada roles skew Azure over AWS/GCP.
+4. **CI/CD + observability made a real module** (Day 106), not a starter-template afterthought — structured logging, alerting, LLM cost dashboard. Both target JDs weight this heavily.
+5. **Scikit-learn touch added to Day 89** (fraud detection system design) — hands-on IsolationForest instead of design-doc-only. Covers "ML frameworks" JD line items without derailing the LLM focus.
+6. **Model Risk Management (SR 11-7) reading added to Day 96** — the actual regulatory framework banks use for AI governance. Referenced in Project 2 + Project 4 `ARCHITECTURE.md`. ~10 min cost, near-zero other candidates know this term.
+7. **React.js depth (Redux Toolkit, redux-observable, React Testing Library) added to Days 41 + 53** — folded into existing Next.js frontend build time for Project 5 and Project 2, not new dedicated days. `redux-observable` kept (not swapped for RTK Query) because it matches the current job's stack.
+
+**What did NOT change:** all 5 projects, all 18 system design problems, all 12 DDIA chapters, all blog posts, all cadences. Nothing cut to make room — only re-paced and resequenced.
+
 ---
 
 ## Day Numbering Convention
 
-**6 working days/week. Friday OFF. 25 weeks = 150 days.**
+**6 working days/week. Friday OFF. Days 1-104 employed pace, Days 105-150 full-time pace.**
 
-Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25.
+Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25 (employed-phase week count — full-time phase compresses faster than 1 week per 6 days).
+
+### Days 1-104 (while employed) — 20 hrs/week
 
 | Day in week | Weekday | Hours |
 |-------------|---------|-------|
-| 1st | Mon | 2 (eve) |
-| 2nd | Tue | 2 (eve) |
-| 3rd | Wed | 2 (eve) |
-| 4th | Thu | 2 (eve) |
+| 1st | Mon | 2.5 (eve) |
+| 2nd | Tue | 2.5 (eve) |
+| 3rd | Wed | 2.5 (eve) |
+| 4th | Thu | 2.5 (eve) |
 | (Fri) | OFF | 0 |
-| 5th | Sat | 5 (deep work) |
-| 6th | Sun | 2 (Sunday block) |
+| 5th | Sat | 7 (deep work) |
+| 6th | Sun | 3 (Sunday block) |
+
+### Days 105-150 (after job ends) — full-time pace
+
+No fixed daily hours — driven by actual availability once the day job ends (target 30-40 hrs/wk). Compress the remaining ~46 days into 4-6 calendar weeks rather than stretching across 8 weeks at the old 15 hrs/wk pace. Job search (already running since Day 61) intensifies in parallel, not starting cold.
 
 ---
 
-## Sunday Block (2 hrs every Sunday)
+## Sunday Block (3 hrs Days 1-104, flexible after)
 
 | Time | Activity |
 |------|----------|
 | 1 hr | Blog draft / writing / review |
-| 30 min | Finance domain reading (Damodaran, Levine, India sources) |
+| 30-50 min | Finance domain reading (Damodaran, Levine, India sources) |
 | 30 min | Week ahead planning + retrospective |
+| remainder | System design / DDIA / governance reading on scheduled weeks (see Ongoing Cadences) |
 
 ---
 
@@ -93,8 +115,9 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 
 ### Web + deployment
 - FastAPI, Streamlit, Next.js
+- **Frontend depth:** React.js (hooks-first), Redux Toolkit, redux-observable (matches current job's stack), React Testing Library
 - Docker
-- HF Spaces, Render, Vercel
+- HF Spaces, Render, Vercel, **Azure Container Apps** (Project 2 — matches enterprise/bank JD stacks)
 - **Self-VPS for Project 5** (cron + DB + email)
 
 ### Observability + evals
@@ -102,6 +125,9 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 
 ### Productivity
 - Notion, GitHub Projects, Airtable
+
+### Structured learning resources (Pluralsight + DeepLearning.AI subscriptions)
+Added to individual days' `Resources` sections where a real course exists on-topic — not every day, only where it adds signal over docs/blogs. Full list: `daily-plans/day-002.md` (Python), `day-003.md` (FastAPI), `day-004.md` + `day-068.md` (function calling/structured extraction), `day-013.md` (vector DBs), `day-016.md` (LangChain), `day-025.md` (RAG evals), `day-027.md` (Docker), `day-041.md` + `day-053.md` (React/Redux), `day-062.md` (Azure), `day-071.md` (LangGraph), `day-083.md` (agent evals), `day-089.md` (scikit-learn). DeepLearning.AI short courses are free regardless of subscription tier; Pluralsight courses need the paid login. Skipped adding resources to non-technical days (interviews, launches, retrospectives, applications) — nothing to learn there.
 
 ---
 
@@ -117,6 +143,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 ### LeetCode (light cadence — projects > algos)
 - 1 problem/week from Day 30 (40 problems by Day 140)
 - Skip if pressure or fatigue — projects matter more
+
+### Job applications (light — START Day 61, v3 addition)
+- **Day 61+:** 5-8 applications/week, best-fit roles first (don't wait for a "complete" portfolio)
+- Runs parallel through Phases 3-5 alongside building — by Phase 6 (Day 118) the pipeline is already warm, not cold
+- Cold DMs to founders/hiring managers piggyback on existing LinkedIn/X cadence — no separate time block
+- **Why:** job search takes 60-90 days once started (`ReadMe.md`); starting at Day 118 alone leaves near-zero overlap with the 3-4 month employment window
 
 ### Finance domain reading (every Sunday — 30 min)
 - Months 1-2: Damodaran intro lectures + Money Stuff newsletter
@@ -192,7 +224,7 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Resource: jxnl.github.io/instructor
 - Build: extract person info from email → Person model
 
-### Day 5 (Sat — 5 hrs): Email classifier MVP shipped
+### Day 5 (Sat — 7 hrs): Email classifier MVP shipped
 - Repo: `fintech-email-classifier`
 - Email → JSON {category, urgency, sentiment, action_items, summary}
 - Streamlit UI in 1 hr
@@ -200,7 +232,7 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Demo GIF in README
 - **Build-in-public:** LinkedIn post w/ live demo link
 
-### Day 6 (Sun — 2 hrs): Sunday block
+### Day 6 (Sun — 3 hrs): Sunday block
 - 1 hr: Identify 20 fintech analysts/PMs on LinkedIn — save to Airtable
 - 30 min: Damodaran "What is Valuation?" intro (YouTube)
 - 30 min: Plan Week 2
@@ -231,13 +263,13 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Synthesize patterns across all 4 calls
 - Identify which Project (1, 2, 3, 4) addresses biggest pain
 
-### Day 11 (Sat — 5 hrs): Analyst interview #5 + first blog post
+### Day 11 (Sat — 7 hrs): Analyst interview #5 + first blog post
 - Final call
 - Write blog post: "I Talked to 5 Fintech Analysts About AI. Here's What They Want."
 - Publish on Medium + LinkedIn + Dev.to
 - **HUGE distribution play** — analysts will share
 
-### Day 12 (Sun — 2 hrs): Sunday block + Phase 1 retrospective
+### Day 12 (Sun — 3 hrs): Sunday block + Phase 1 retrospective
 - 1 hr: Phase 1 retrospective in Notion
 - 30 min: Damodaran video #2
 - 30 min: Plan Phase 2 — adjust Project 1 scope based on user feedback
@@ -279,14 +311,14 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - LCEL, document loaders, text splitters
 - Build: tiny RAG over 1 PDF
 
-### Day 17 (Sat — 5 hrs): Project 1 setup + ingestion pipeline
+### Day 17 (Sat — 7 hrs): Project 1 setup + ingestion pipeline
 - Repo: `sec-10k-analyzer`
 - FastAPI + Streamlit skeleton
 - sec-edgar-downloader integration
 - PDF → chunk → embed → Pinecone (metadata: company, date, section)
 - Test: ingest AAPL 10-K end-to-end
 
-### Day 18 (Sun — 2 hrs): Sunday block
+### Day 18 (Sun — 3 hrs): Sunday block
 - 1 hr: Outline blog post #2 — "Building Production RAG"
 - 30 min: Money Stuff newsletter (subscribe + read 2)
 - 30 min: Week 4 plan
@@ -315,13 +347,13 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Compare 2 companies' 10-Ks
 - Ingest 3 years of 1 company → YoY queries
 
-### Day 23 (Sat — 5 hrs): Caching + cost + chunking experiments
+### Day 23 (Sat — 7 hrs): Caching + cost + chunking experiments
 - Redis cache (Upstash)
 - Cost dashboard
 - Test 3 chunking strategies, pick best
 - LinkedIn post #5 — chunking experiments results
 
-### Day 24 (Sun — 2 hrs): Sunday block
+### Day 24 (Sun — 3 hrs): Sunday block
 - 1 hr: Continue blog post #2
 - 30 min: Damodaran finance lecture
 - 30 min: Plan Week 5
@@ -350,12 +382,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - 30-sec demo GIF
 - Lessons learned section
 
-### Day 29 (Sat — 5 hrs): Reach back to 5 analysts (user feedback)
+### Day 29 (Sat — 7 hrs): Reach back to 5 analysts (user feedback)
 - Send Project 1 demo link to 5 interviewees
 - Schedule 5-min check-ins for next week
 - Collect feedback, fix top 3 issues live
 
-### Day 30 (Sun — 2 hrs): Sunday block — START LeetCode (1/wk)
+### Day 30 (Sun — 3 hrs): Sunday block — START LeetCode (1/wk)
 - 1 hr: Finalize blog post #2
 - 30 min: 10-K reading
 - 30 min: 1 LeetCode medium problem
@@ -386,13 +418,13 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - screener.in API research
 - Pick 3 reliable sources
 
-### Day 35 (Sat — 5 hrs): Project 5 architecture + VPS setup
+### Day 35 (Sat — 7 hrs): Project 5 architecture + VPS setup
 - Repo: `nifty-earnings-digest`
 - VPS setup: Python 3.12, Docker, nginx
 - Configure subdomain on owned domain
 - Architecture: VPS cron → fetch → analyze → email + DB
 
-### Day 36 (Sun — 2 hrs): Sunday block
+### Day 36 (Sun — 3 hrs): Sunday block
 - 1 hr: Project 5 landing page copy draft
 - 30 min: India fintech landscape reading (Razorpay blog)
 - 30 min: Week 7 plan
@@ -428,13 +460,15 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Responsive HTML email template
 - Test send to 3 friend emails
 
-### Day 41 (Sat — 5 hrs): Project 5 — landing page
+### Day 41 (Sat — 7 hrs): Project 5 — landing page
 - Next.js + Tailwind
 - Hero, value prop, signup form
+- React fundamentals refresh: hooks (useState/useEffect/useMemo) before wiring state
+- Redux Toolkit store for signup form + subscription state (deliberate practice, not just useState)
 - Vercel deploy w/ owned domain
 - PostHog analytics
 
-### Day 42 (Sun — 2 hrs): Sunday block
+### Day 42 (Sun — 3 hrs): Sunday block
 - 1 hr: Project 5 launch tweet + LinkedIn copy
 - 30 min: Indian fintech reading
 - 30 min: Week 8 plan
@@ -466,14 +500,14 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Fix bugs from real users
 - Write Project 2 spec doc — `invoice-ap-auditor`
 
-### Day 47 (Sat — 5 hrs): Project 2 — extraction pipeline
+### Day 47 (Sat — 7 hrs): Project 2 — extraction pipeline
 - Repo created
 - PyMuPDF, pdfplumber comparison
 - Multimodal extraction (Claude vision API)
 - Pydantic Invoice schema (nested w/ line items)
 - Test on 30 sample invoices
 
-### Day 48 (Sun — 2 hrs): Sunday block
+### Day 48 (Sun — 3 hrs): Sunday block
 - 1 hr: Blog post #3 outline — "Shipping a Newsletter SaaS in 2 Weeks"
 - 30 min: Money Stuff
 - 30 min: Plan Week 9
@@ -502,12 +536,15 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Beyond rules: "Does this look suspicious?"
 - Hybrid: rules + LLM second opinion
 
-### Day 53 (Sat — 5 hrs): Project 2 — Next.js frontend
+### Day 53 (Sat — 7 hrs): Project 2 — Next.js frontend
 - Next.js 14 App Router
 - Upload, list, detail views
+- Redux Toolkit slice for invoice processing queue/status (real complex client state)
+- redux-observable epic: poll processing status, cancel-on-unmount, retry-on-failure (matches current job's stack)
+- React Testing Library: tests for the queue component + at least one epic
 - Connect to FastAPI
 
-### Day 54 (Sun — 2 hrs): Sunday block
+### Day 54 (Sun — 3 hrs): Sunday block
 - 1 hr: Blog post #3 publish — Project 5 launch story
 - 30 min: 10-K reading (start India: RELIANCE annual report)
 - 30 min: Plan Week 10
@@ -534,12 +571,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Claude Haiku for extraction, Sonnet for ambiguous
 - Track cost per invoice
 
-### Day 59 (Sat — 5 hrs): Project 2 — admin dashboard + LangSmith
+### Day 59 (Sat — 7 hrs): Project 2 — admin dashboard + LangSmith
 - Stats: invoices processed, flags, $ savings
 - LangSmith tracing
 - Vendor leaderboard
 
-### Day 60 (Sun — 2 hrs): Sunday block — USER RESEARCH ROUND 2
+### Day 60 (Sun — 3 hrs): Sunday block — USER RESEARCH ROUND 2
 - 1 hr: Reach 5 newsletter users + 5 Project 1 users for feedback calls
 - 30 min: Stratechery
 - 30 min: Plan Week 11
@@ -548,13 +585,15 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 
 ## Week 11 — Project 2 Ship + User Feedback
 
-### Day 61 (Mon): Project 2 — eval suite
+### Day 61 (Mon): Project 2 — eval suite + job search kickoff
 - 50 invoices w/ ground truth
 - Field-level extraction accuracy
 - Flag precision/recall
+- **Job search light cadence STARTS today** — 5-8 applications/wk, best-fit roles first (see v3 Changes — don't wait for Phase 6)
 
-### Day 62 (Tue): Project 2 — deploy
-- Backend: Render
+### Day 62 (Tue): Project 2 — deploy (Azure)
+- Backend: Azure Container Apps (swapped from Render — matches enterprise/bank JD stacks, e.g. Citi/Hexaware postings)
+- Azure OpenAI SDK for this project's LLM calls instead of direct OpenAI/Anthropic
 - Frontend: Vercel
 - DB: Supabase
 - Live + tested
@@ -569,12 +608,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Architecture diagram
 - LinkedIn post #13 — Project 2 launch teaser
 
-### Day 65 (Sat — 5 hrs): Project 2 launch + blog #4
+### Day 65 (Sat — 7 hrs): Project 2 launch + blog #4
 - Publish blog #4 — "I Built an AI Invoice Auditor"
 - Medium + Dev.to + LinkedIn
 - Show HN
 
-### Day 66 (Sun — 2 hrs): Sunday block
+### Day 66 (Sun — 3 hrs): Sunday block
 - 1 hr: Phase 3 retrospective
 - 30 min: India fintech reading
 - 30 min: Plan Phase 4
@@ -616,12 +655,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Understand internals
 - LinkedIn post #15 — agents explainer
 
-### Day 71 (Sat — 5 hrs): LangGraph intro
+### Day 71 (Sat — 7 hrs): LangGraph intro
 - DeepLearning.AI: "AI Agents in LangGraph" (1.5 hrs)
 - Nodes, edges, state
 - Build: 3-tool agent in LangGraph
 
-### Day 72 (Sun — 2 hrs): Sunday block
+### Day 72 (Sun — 3 hrs): Sunday block
 - 1 hr: Blog post #5 outline — "LLM Agents That Don't Suck"
 - 30 min: Damodaran
 - 30 min: Plan Week 13
@@ -649,12 +688,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Sequential agents
 - Resource: langchain-ai.github.io/langgraph/tutorials
 
-### Day 77 (Sat — 5 hrs): Project 3 — research workflow
+### Day 77 (Sat — 7 hrs): Project 3 — research workflow
 - Nodes: plan → fetch → analyze → write
 - State: question, gathered_data, analysis, report
 - Test: "Is NVIDIA overvalued?"
 
-### Day 78 (Sun — 2 hrs): Sunday block
+### Day 78 (Sun — 3 hrs): Sunday block
 - 1 hr: Continue blog #5
 - 30 min: Levine
 - 30 min: Plan Week 14
@@ -681,13 +720,13 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Stream agent steps (show thinking)
 - Final report preview + download
 
-### Day 83 (Sat — 5 hrs): Project 3 — eval suite + deploy
+### Day 83 (Sat — 7 hrs): Project 3 — eval suite + deploy
 - 10 research questions w/ gold answers
 - Measure factual accuracy, completeness
 - Deploy to HF Space
 - LinkedIn post #18 — Project 3 launch teaser
 
-### Day 84 (Sun — 2 hrs): Sunday block
+### Day 84 (Sun — 3 hrs): Sunday block
 - 1 hr: Blog #5 polish
 - 30 min: India fintech reading (RBI annual)
 - 30 min: Plan Week 15
@@ -717,12 +756,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - LinkedIn post #20 — "Got my first paying customer"
 - This is RESUME GOLD
 
-### Day 89 (Sat — 5 hrs): User feedback round 3
+### Day 89 (Sat — 7 hrs): User feedback round 3
 - 5 calls w/ paid customers (if any) + 5 free users
 - Identify what made them pay (or not)
 - Adjust pricing/features
 
-### Day 90 (Sun — 2 hrs): Sunday block
+### Day 90 (Sun — 3 hrs): Sunday block
 - 1 hr: YC application draft (Question 1: What does company do?)
 - 30 min: Damodaran valuation deep dive
 - 30 min: Plan Week 16
@@ -761,14 +800,15 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Deductions: 80C, 80D, HRA, LTA
 - ClearTax guides
 
-### Day 95 (Sat — 5 hrs): Project 4 — extraction + calculator
+### Day 95 (Sat — 7 hrs): Project 4 — extraction + calculator
 - Pydantic schemas: SalarySlip, Form16, ITR
 - Old + new regime calculator
 - Test w/ sample Form 16
 
-### Day 96 (Sun — 2 hrs): Sunday block
+### Day 96 (Sun — 3 hrs): Sunday block
 - 1 hr: YC app polish
-- 30 min: NPCI/UPI architecture
+- 20 min: NPCI/UPI architecture
+- 10 min: Read Fed/OCC SR 11-7 "Guidance on Model Risk Management" overview — reference explicitly in Project 2 + Project 4 `ARCHITECTURE.md` under a governance section
 - 30 min: Plan Week 17
 
 ---
@@ -795,12 +835,12 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - LinkedIn post #23 — "Just submitted to YC. Here's why."
 - **HUGE distribution moment**
 
-### Day 101 (Sat — 5 hrs): Project 4 — eval + deploy
+### Day 101 (Sat — 7 hrs): Project 4 — eval + deploy
 - 10 sample Form 16s w/ known correct calculations
 - HF Spaces deploy
 - Demo GIF + README
 
-### Day 102 (Sun — 2 hrs): Sunday block
+### Day 102 (Sun — 3 hrs): Sunday block
 - 1 hr: Blog post #6 outline — "Building India-Specific AI"
 - 30 min: India fintech reading
 - 30 min: Plan Week 18
@@ -822,9 +862,11 @@ Day 1=Mon wk1, Day 5=Sat wk1, Day 6=Sun wk1, Day 7=Mon wk2, ... Day 150=Sun wk25
 - Add to P1, P2, P3 — huge cost savings
 - Document savings in blog post draft
 
-### Day 106 (Thu): GitHub Actions CI for evals
-- Run evals on every PR
-- Block merges on regression
+### Day 106 (Thu): CI/CD + observability (real module, not a checkbox)
+- GitHub Actions: run evals + tests on every PR, block merges on regression
+- Structured logging (structlog/JSON) on Project 2 + Project 4
+- Basic alerting: Azure Monitor (Azure-deployed project) or Sentry free tier
+- LLM cost-tracking dashboard: $/request, $/day across all projects
 
 ### Day 107 (Sat — 5 hrs): Cost optimization deep dive blog
 - Document cost-cutting across all projects

@@ -13,6 +13,17 @@
 
 ---
 
+## Pacing strategy (v3 — set 2026-08-14)
+
+**Driver:** current job ends in ~3-4 months. Full plan detailed in `CURRICULUM.md` v3 Changes section.
+
+- **Days 1-104 (while employed):** 20 hrs/week (Mon-Thu 2.5 hrs, Sat 7 hrs, Sun 3 hrs). Target: reach Day 104 within ~13 weeks (conservative 3-month checkpoint).
+- **Days 105-150 (after job ends):** full-time pace, no fixed hours, target 30-40 hrs/wk — compresses remaining ~46 days into 4-6 weeks.
+- **Job search resequenced:** light application cadence (5-8/wk) starts **Day 61**, not Day 118 — runs parallel with building so the pipeline is already warm by the time the job ends, instead of starting cold.
+- **No topics cut** — same 150 days of content. Added (folded into existing days, not new time): Azure deploy target for Project 2 (Day 62), real CI/CD + observability module (Day 106), scikit-learn touch on fraud detection SD problem (Day 89), Model Risk Management/SR-11-7 reading (Day 96), Redux Toolkit + redux-observable + React Testing Library depth (Days 41, 53).
+
+---
+
 ## Phase tracker
 
 | Phase | Days | Status | Started | Completed |
