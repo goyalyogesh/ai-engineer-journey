@@ -1,0 +1,5 @@
+# create a venv in ./env, activate it, upgrade pip, install requirements
+python3 -m venv ./env
+source env/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt

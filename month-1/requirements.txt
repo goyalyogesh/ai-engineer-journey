@@ -1,0 +1,17 @@
+
+langchain
+langchain-openai
+langchain-google-genai
+python-dotenv
+openai
+gradio
+streamlit
+pydantic
+langchain-google
+langgraph
+wikipedia
+langchain-community
+langchain-anthropic
+faiss-cpu
+httpx[socks]
+socksio
