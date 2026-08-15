@@ -5,6 +5,8 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 uvicorn 03FastAPI:app --reload
 
+python3 01LLMCall.py
+
 -----------Pydantic--------
 - handles parsing, structural type validation, and data serilaization, In v2, the internals were rewritten in Rus for extreme performance
 - BaseModel: define schemas using standard Python type hints.
