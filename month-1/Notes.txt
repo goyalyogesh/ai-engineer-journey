@@ -19,3 +19,9 @@ python3 01LLMCall.py
 Incoming JSON Body ──> [ TodoRequest Schema ] ──> Custom Field Validators ──> Endpoint Logic
                                                                                   │
 Outgoing JSON Body <── [ TodoResponse Schema ] <── Computed Fields 💾 <────────────┘
+
+-------------Instructor-----------------
+- two critical skills for building applications with LLMs: function-calling and structured data extraction.
+-Function-calling allows you to extend LLMs with custom capabilities by enabling them to form calls to external functions based on natural language instructions. Structured data extraction enables LLMs to pull usable information from unstructured text.
+-Instructor bridges the gap between unstructured text and your Pydantic schemas, forcing models like Gemini, Claude, or GPT to return strict, type-safe Python objects instead of raw text.
+-Instructor's most powerful feature is automated self-correction.
