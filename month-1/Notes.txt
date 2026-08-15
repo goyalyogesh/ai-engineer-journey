@@ -3,3 +3,17 @@ python3 -m venv ./env
 source env/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+uvicorn 03FastAPI:app --reload
+
+-----------Pydantic--------
+- handles parsing, structural type validation, and data serilaization, In v2, the internals were rewritten in Rus for extreme performance
+- BaseModel: define schemas using standard Python type hints.
+- @field_validator: built via pydantic.field_validator;must be structured as @classmethod;catches custom formatting rules e.g stripping strings , checking for characters etc before data ever touches your FASTAPI logic
+- @computed_field: Dynamic output serilaization, built via pydantic.computed_field;converts standard pythong property methods into JSON key-value pairs during serialization; great for calculating values on the fly without wasting database storage space
+
+-----FastAPI----
+- works symbiotically with Pydantic schemas to automate doc and handle data marshaling
+
+Incoming JSON Body ──> [ TodoRequest Schema ] ──> Custom Field Validators ──> Endpoint Logic
+                                                                                  │
+Outgoing JSON Body <── [ TodoResponse Schema ] <── Computed Fields 💾 <────────────┘
