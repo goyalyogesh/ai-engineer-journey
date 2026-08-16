@@ -4,7 +4,7 @@
 
 | # | Project | Days | Status | Repo | Live Demo | Blog |
 |---|---------|------|--------|------|-----------|------|
-| Warmup | Email Classifier | 9-12 | 🔲 | — | — | — |
+| Warmup | Email Classifier | 5, 9-12 | ✅ | [folder](https://github.com/goyalyogesh/ai-engineer-journey/tree/main/tracker/projects/email-class-project-1) | [live](https://yogi-ai-email.streamlit.app) | — |
 | 1 | SEC 10-K Analyzer | 13-37 | 🔲 | — | — | — |
 | 2 | Invoice AP Auditor | 38-67 | 🔲 | — | — | — |
 | 3 | Equity Research Agent | 68-92 | 🔲 | — | — | — |

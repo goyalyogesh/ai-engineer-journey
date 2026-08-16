@@ -9,7 +9,7 @@ Built as Day 5 of a 90-day .NET → AI Engineer transition (Phase 1 warmup proje
 ![demo](demo.gif)
 <!-- Record with kap.app, save as demo.gif in this folder — GitHub will render it above automatically. -->
 
-**Live app:** _add your Streamlit Cloud URL here once deployed_
+**Live app:** [yogi-ai-email.streamlit.app](https://yogi-ai-email.streamlit.app)
 
 ## What it does
 
@@ -122,6 +122,6 @@ streamlit run app.py
 - [x] Project scaffolded (schema, classification logic, Streamlit UI)
 - [x] Email → JSON classification (category, urgency, sentiment, action_items, summary)
 - [x] Streamlit UI
-- [ ] Deploy to Streamlit Cloud
-- [ ] Demo GIF recorded (kap.app) and embedded above
-- [ ] LinkedIn post #2 — "First AI project shipped"
+- [x] Deploy to Streamlit Cloud — live at [yogi-ai-email.streamlit.app](https://yogi-ai-email.streamlit.app)
+- [ ] Demo GIF recorded (kap.app) and embedded above — deferred, a static screenshot exists but not a GIF yet
+- [x] LinkedIn post #2 — posted: https://www.linkedin.com/feed/update/urn:li:activity:7494859118000631808/
