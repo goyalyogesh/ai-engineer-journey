@@ -1163,14 +1163,17 @@ def render(day):
         md += "- [ ] DDIA chapter read + notes\n"
     md += f"- [ ] tracker/days/day-{num:03d}.md filled\n"
     md += "- [ ] Tomorrow's first task pre-decided\n\n"
-    md += f"📍 [CURRICULUM.md](../CURRICULUM.md) Day {num}\n"
+    md += f"📍 [CURRICULUM.md](../../CURRICULUM.md) Day {num}\n"
     return md
 
 
 count = 0
 for day in DAYS:
     num = day[0]
-    path = OUT / f"day-{num:03d}.md"
+    month = (num - 1) // 30 + 1
+    month_dir = OUT / f"month-{month}"
+    month_dir.mkdir(exist_ok=True)
+    path = month_dir / f"day-{num:03d}.md"
     path.write_text(render(day))
     count += 1
-print(f"Generated {count} daily plan files in {OUT}")
+print(f"Generated {count} daily plan files in {OUT} (month-1 .. month-{(150 - 1) // 30 + 1})")

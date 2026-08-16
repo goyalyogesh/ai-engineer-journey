@@ -8,6 +8,9 @@ Reading "Designing Data-Intensive Applications" by Martin Kleppmann.
 | Day | Chapter | Status |
 |-----|---------|--------|
 | 12 | Ch 1 — Reliable, Scalable, Maintainable Apps | 🔲 |
+
+
+
 | 24 | Ch 2 — Data Models & Query Languages | 🔲 |
 | 36 | Ch 3 — Storage & Retrieval | 🔲 |
 | 48 | Ch 4 — Encoding & Evolution | 🔲 |

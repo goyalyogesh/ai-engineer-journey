@@ -54,8 +54,9 @@ def render(day_num: int) -> str:
     md += "**Mood:** _\n\n"
     md += "---\n\n"
     md += "## Today's focus\n\n"
-    md += f"📋 Plan: [`daily-plans/day-{day_num:03d}.md`](../../daily-plans/day-{day_num:03d}.md)\n\n"
-    md += "[Copy the day's plan from daily-plans/day-{:03d}.md or summarize in 3 bullets]\n\n".format(day_num)
+    month = (day_num - 1) // 30 + 1
+    md += f"📋 Plan: [`daily-plans/month-{month}/day-{day_num:03d}.md`](../../daily-plans/month-{month}/day-{day_num:03d}.md)\n\n"
+    md += "[Copy the day's plan from daily-plans/month-{}/day-{:03d}.md or summarize in 3 bullets]\n\n".format(month, day_num)
     md += "---\n\n"
     md += "## What I did\n\n"
     md += "- \n- \n- \n\n"
