@@ -1248,3 +1248,48 @@ Added to individual days' `Resources` sections where a real course exists on-top
 **This is the hybrid plan: your safety + Musk's speed + Altman's leverage.**
 
 Ready when you set Day 1.
+
+---
+
+# Bonus: Phase 7 — Project 6, Fine-Tuning Hedge (Days 151–158)
+
+**Added after the core 150-day plan was already complete.** Days 1–150 above are the full original plan — nothing in it was cut, resequenced, or renumbered to make room for this. This section is a deliberate, scoped addition, not a course correction.
+
+**Why it exists:** all 5 core projects (Warmup + Projects 1–5) are API-based — prompting, RAG, agents, structured outputs. That's the right skill set for the applied GenAI/LLM Engineer roles at banks and fintechs this plan targets. But it leaves one gap: zero hands-on model training. "Have you ever fine-tuned a model?" is a standard screening question for broader "ML Engineer" titles or AI-native companies, and this plan had no answer to it. Days 151–158 close that gap with a real, shipped project — not just a concept read.
+
+**Honest tradeoff on timing:** this was deliberately placed *after* Day 150 to avoid renumbering the entire existing plan (150 daily-plan files, 150 tracker files, and both generator scripts all reference exact day numbers). The cost: per Phase 6's own pacing (Days 118–150 = Application Blitz → Interview Prep → Live Interview Loop → Final Rounds), this project lands after most first-round interviews, not before. It's insurance for whatever's still in flight or a later search — not ammunition for the interviews already scheduled by Day 150.
+
+**Scope:** 8 days, disciplined on purpose — 1 day of fundamentals, 6 days of build/eval, 1 day to ship. Not a second deep specialization; enough to speak to fine-tuning with a real, defensible artifact behind it.
+
+### Day 151 (Mon): Fine-tuning fundamentals
+- Full fine-tuning vs. PEFT (LoRA/QLoRA) — what changes in the model, memory/compute tradeoffs
+- When fine-tuning beats prompting (and when it doesn't)
+- Tour: Hugging Face Transformers, PEFT, TRL
+- Pick base model (small open model) + task + dataset (financial sentiment/classification)
+
+### Day 152 (Tue): Data + baseline
+- Load/clean/split the dataset; write the eval harness
+- Run the pretrained base model zero-shot — the number the fine-tune has to beat
+
+### Day 153 (Wed): First LoRA fine-tuning run
+- LoRA config, training loop (HF Trainer / TRL SFTTrainer)
+- Train on free/cheap GPU (Colab), save the adapter
+
+### Day 154 (Thu): Evaluate + iterate
+- Fine-tuned vs. baseline — accuracy/F1, error analysis
+- One hyperparameter pass if warranted
+
+### Day 155 (Sat): Inference serving
+- Merge LoRA weights, wrap in a FastAPI endpoint
+
+### Day 156 (Sun): Comparison demo
+- Streamlit UI: base-model-prompted vs. fine-tuned, side by side, with Day 154's metrics on the page
+
+### Day 157 (Mon): Deploy + README
+- Deploy to Hugging Face Spaces
+- Results table + a "when to fine-tune vs. when to prompt" writeup — the actual interview-ready artifact
+
+### Day 158 (Tue): Polish + ship
+- Final polish, add to `tracker/projects/README.md` as Project 6, LinkedIn post
+
+📍 Full day-by-day detail: `daily-plans/month-6/day-151.md` through `day-158.md`
