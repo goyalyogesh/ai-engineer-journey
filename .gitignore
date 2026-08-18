@@ -18,6 +18,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+*.bin
+*.sqlite*
 
 # Node
 node_modules/

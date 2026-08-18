@@ -10,6 +10,7 @@ python3 01LLMCall.py
 http://localhost:8888/lab?token=531d19dbb475eac575ccf80b337f3962162a184efc6c3e43
 https://console.neo4j.io/projects/f28b4b8d-2cae-4440-822c-ccb6009d0043/home
 
+pip install chromadb
 -----------Pydantic--------
 - handles parsing, structural type validation, and data serilaization, In v2, the internals were rewritten in Rus for extreme performance
 - BaseModel: define schemas using standard Python type hints.
@@ -28,3 +29,10 @@ Outgoing JSON Body <── [ TodoResponse Schema ] <── Computed Fields 💾 
 -Function-calling allows you to extend LLMs with custom capabilities by enabling them to form calls to external functions based on natural language instructions. Structured data extraction enables LLMs to pull usable information from unstructured text.
 -Instructor bridges the gap between unstructured text and your Pydantic schemas, forcing models like Gemini, Claude, or GPT to return strict, type-safe Python objects instead of raw text.
 -Instructor's most powerful feature is automated self-correction.
+
+-----------NumPy------------------------
+# NumPy array — just do it
+import numpy as np
+a = np.array([1, 2, 3])
+b = np.array([4, 5, 6])
+result = a + b  # array([5, 7, 9])

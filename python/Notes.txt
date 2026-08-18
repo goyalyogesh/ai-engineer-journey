@@ -1,0 +1,54 @@
+-----------NumPy--------
+- NumPy = library for fast math on arrays of numbers. The array type is called ndarray.
+- Why it exists: plain Python lists don't do element-wise math.
+    [1,2,3] + [4,5,6]            -> [1,2,3,4,5,6]   (list: concatenates)
+    np.array([1,2,3]) + np.array([4,5,6]) -> [5,7,9] (ndarray: adds element-wise)
+- np.array(some_list) converts a plain Python list into a real ndarray so the
+  math functions below actually work on it (they error or misbehave on a plain list).
+
+ndarray -- "n-dimensional array", the actual type behind every numpy array
+- 4 properties that make it fast:
+    1. Fixed type (dtype)     -- every element is the same type (all float64, etc.)
+    2. Fixed shape            -- knows its own dimensions, e.g. (1536,) or (5, 1536)
+    3. Contiguous memory      -- one packed block, not scattered pointers like a list
+    4. Vectorized ops         -- +, np.dot, etc. run in compiled C over the whole block
+- "n-dimensional" isn't just a name -- it generalizes past 1D:
+    np.array(single_embedding)      -> shape (1536,)     1D
+    np.array([embedding1, ..., 5])  -> shape (5, 1536)   2D (stacking 5 of them)
+- C# comparison: Python list ~= List<object> (flexible, per-element overhead).
+  ndarray ~= double[] (fixed type, tightly packed, built for bulk math).
+- Useful attributes on any ndarray:
+    vec.shape   -> (1536,)
+    vec.dtype   -> dtype('float64')
+    vec.ndim    -> 1
+
+np.dot(a, b) -- dot product
+- Multiply matching elements, add them all up.
+    dot([1,2,3],[4,5,6]) = 1*4 + 2*5 + 3*6 = 32
+- Big positive = vectors point the same way. ~0 = unrelated. Negative = opposite directions.
+- This is the numerator in cosine similarity.
+
+np.linalg.norm(a) -- vector length (L2 / Euclidean norm, the default)
+- sqrt of (sum of each element squared) -- literally Pythagorean theorem, generalized.
+    norm([3,4]) = sqrt(3^2 + 4^2) = sqrt(25) = 5
+- This is the denominator in cosine similarity -- dividing by norm(a)*norm(b) cancels
+  out each vector's length, leaving pure direction.
+- Has an `ord` param for other norm types (e.g. ord=1 for L1/Manhattan).
+
+np.linalg.svd(matrix) -- Singular Value Decomposition
+- Breaks a matrix into three pieces: U, S, Vt  (so that A = U @ S @ Vt)
+- Practical use here: dimensionality reduction -- find the few directions that explain
+  the most variation in your data, then project onto just those.
+- Used to compress 1536-dim embedding vectors down to 2D so they can be plotted.
+    U -> each row's coordinate along every ranked direction
+    S -> how much each direction matters, ranked highest to lowest
+    U[:, :2] * S[:2]  -> each point's (x, y) position on the top 2 directions
+- Same underlying math that powers PCA (Principal Component Analysis).
+- Lossy -- good for visual intuition, not precise measurement. Trust the full-dimension
+  cosine similarity numbers over the 2D picture.
+
+Cosine similarity, put together:
+    cosine_similarity(a, b) = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+----------

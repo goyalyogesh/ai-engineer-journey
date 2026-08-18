@@ -18,3 +18,4 @@ socksio
 fastapi
 uvicorn
 instructor[google-genai]
+chromadb
