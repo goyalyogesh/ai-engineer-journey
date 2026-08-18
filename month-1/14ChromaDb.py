@@ -1,32 +1,30 @@
-#Chroma's built-in default embedding model (all-MiniLM-L6-v2), so you do not need an external API key like OpenAI to get started.
+# Chroma's built-in default embedding model (all-MiniLM-L6-v2), so no external
+# API key is needed here — a separate local embedding space from the Pinecone
+# script (which uses OpenAI's text-embedding-3-small).
 
 import chromadb
+from sentences_100 import SENTENCES, QUERIES
 
 # 1. Initialize a persistent client (saves data locally to a folder)
 client = chromadb.PersistentClient(path="./chroma_db_data")
 
 # 2. Create or get a collection
-# Chroma automatically handles the embedding generation for text
-collection = client.get_or_create_collection(name="my_documents")
+collection = client.get_or_create_collection(name="sec_10k_sentences")
 
-# 3. Add text data to the collection
-collection.add(
-    documents=[
-        "Chroma is a vector database designed for LLM apps.",
-        "Python is a versatile programming language used for data science.",
-        "Semantic search matches concepts, not just exact keyword strings.",
-        "RAG stands for Retrieval-Augmented Generation."
-    ],
-    ids=["doc1", "doc2", "doc3", "doc4"]
+# 3. Add all 100 sentences (Chroma embeds them automatically)
+collection.upsert(
+    ids=[s["id"] for s in SENTENCES],
+    documents=[s["text"] for s in SENTENCES],
+    metadatas=[{"topic": s["topic"]} for s in SENTENCES],
 )
+print(f"Indexed {collection.count()} sentences in Chroma.\n")
 
-# 4. Perform a semantic search query
-# The engine will find the closest conceptual match, even without matching words
-results = collection.query(
-    query_texts=["How do you find meaning in text data?"],
-    n_results=2
-)
-
-# 5. Print the top matches
-for doc, score in zip(results['documents'][0], results['distances'][0]):
-    print(f"Match: {doc} (Distance score: {score:.4f})")
+# 4. Run each query and show the top 5 semantic matches
+for query in QUERIES:
+    print(f"Query: {query}")
+    results = collection.query(query_texts=[query], n_results=5)
+    for doc, meta, distance in zip(
+        results["documents"][0], results["metadatas"][0], results["distances"][0]
+    ):
+        print(f"  [{meta['topic']:<20}] (distance {distance:.4f}) {doc}")
+    print()
