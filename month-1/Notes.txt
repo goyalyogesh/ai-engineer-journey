@@ -7,6 +7,9 @@ uvicorn 03FastAPI:app --reload
 
 python3 01LLMCall.py
 
+http://localhost:8888/lab?token=531d19dbb475eac575ccf80b337f3962162a184efc6c3e43
+https://console.neo4j.io/projects/f28b4b8d-2cae-4440-822c-ccb6009d0043/home
+
 -----------Pydantic--------
 - handles parsing, structural type validation, and data serilaization, In v2, the internals were rewritten in Rus for extreme performance
 - BaseModel: define schemas using standard Python type hints.
