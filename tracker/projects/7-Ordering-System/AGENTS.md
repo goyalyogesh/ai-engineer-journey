@@ -84,8 +84,9 @@ These aren't preferences — violating them undoes the point of the project:
   graph via Neo4j once Extended).
 - **Stack:** FastAPI (serving), LangGraph (orchestration), Pydantic
   (structured I/O everywhere), SQLite-per-service at Core (Postgres/RDS
-  named for Extended), Bedrock-hosted Claude at Extended (direct API at
-  Core), pytest (3-layer testing strategy, Section 13).
+  named for Extended), Bedrock-hosted Claude + API Gateway ingress at
+  Extended (direct API + in-app auth/rate-limit at Core, Section 14),
+  pytest (testing strategy, Section 13).
 
 ## Review history — what's already been checked, so you don't re-flag it
 

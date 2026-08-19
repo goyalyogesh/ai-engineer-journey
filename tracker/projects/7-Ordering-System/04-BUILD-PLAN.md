@@ -76,7 +76,12 @@ order-diagnosis-agent/
     ├── test_mock_services.py
     ├── test_tools.py
     ├── test_specialists.py
-    └── test_supervisor.py
+    ├── test_supervisor.py
+    ├── test_api.py
+    ├── test_kb_vector.py       # Phase 8, Extended
+    ├── test_kb_graph.py        # Phase 8, Extended
+    ├── test_kb_merged.py       # Phase 8, Extended
+    └── test_consumer.py        # Phase 9, Extended
 ```
 
 ## Phase 0 — Scaffolding
@@ -362,12 +367,22 @@ supervisor's decision point is a plausible future pause/resume boundary.
    `16Langchain-Deep-Interview.ipynb`), which triggers the
    `confidence`/`insufficient_evidence` validator (Section 3.4) automatically.
 
-**Definition of done:** running the compiled supervisor graph against
-`ORD-88213` end-to-end reproduces the worked example's diagnosis exactly.
-`tests/test_supervisor.py` covers: the worked example, one
-`insufficient_evidence` case (`ORD-90001`), one conflict case (`ORD-90006`),
-and one multiple-true-causes case (`ORD-90004`) verifying the pipeline-order
-rule picks the billing hold over the provisioning error.
+**Definition of done — two distinct test types, per `02-ARCHITECTURE.md`
+Section 13's revised testing table:**
+- **Fast, isolated `synthesize_diagnosis` unit tests** — construct
+  `SupervisorState` directly with hand-crafted `SpecialistFinding` objects
+  (no specialists, no mock services, no network calls involved at all):
+  one conflict case, one multiple-true-causes case verifying the
+  pipeline-order rule, one clean case. These run in milliseconds and are
+  what actually test the supervisor's own logic in isolation.
+- **Full-stack integration test** — running the compiled supervisor graph
+  (real specialists, real mock services) against `ORD-88213` end-to-end
+  reproduces the worked example's diagnosis exactly. Slower, but validates
+  real wiring, not just logic.
+
+`tests/test_supervisor.py` contains both kinds, clearly separated (e.g. by
+test class or filename suffix) — not blended together as if they were the
+same kind of test.
 
 ## Phase 5 — FastAPI serving layer [CORE]
 
@@ -391,6 +406,11 @@ async def diagnose(request: DiagnoseRequest) -> DiagnosisOutput:
 '{"order_id": "ORD-88213"}'` returns the correct structured diagnosis; a
 request without the header returns 401; log file shows a full
 correlation-ID-linked trace of that one request's tool calls.
+`tests/test_api.py` (using FastAPI's `TestClient`, no real server process
+needed) covers this same set automatically: valid key succeeds, missing/
+wrong key returns 401, and exceeding the rate limit returns 429 — the API
+layer's own contract, independent of whether the agent logic underneath it
+is real or stubbed.
 
 ## Phase 6 — Evaluation harness [CORE]
 
@@ -486,9 +506,18 @@ vector + graph (`02-ARCHITECTURE.md` Section 5, FR8).
 - Re-run `eval/run_eval.py` in full — confirm no regression from Phase 2's
   Chroma-only version
 
-**Definition of done:** eval suite still passing; a query for `ERR_4471`
-returns both the vector-matched explanation *and* the graph-traversed
-resolution path + related incident IDs.
+**Definition of done — isolated first, then merged, per the same
+isolation-then-integration pattern as `02-ARCHITECTURE.md` Section 13:**
+- `tests/test_kb_vector.py` — vector search alone (Chroma only, no Neo4j
+  connection needed) returns the expected semantic match for `ERR_4471`.
+- `tests/test_kb_graph.py` — graph traversal alone (a direct Cypher query
+  via `neo4j_for_adk.py`, no vector search involved) returns the correct
+  cause/resolution/related-incident chain for `ERR_4471`.
+- `tests/test_kb_merged.py` — `search_knowledge_base`'s actual merge logic,
+  verifying both results land in the combined response correctly.
+- Only then: eval suite still passing; a live query for `ERR_4471` returns
+  both the vector-matched explanation *and* the graph-traversed resolution
+  path + related incident IDs.
 
 ## Phase 9 — Kafka event-driven trigger [EXTENDED]
 
@@ -506,9 +535,19 @@ resolution path + related incident IDs.
   the **same** compiled supervisor graph from Phase 4, publishes results +
   audit trail to `diagnosis.events`
 
-**Definition of done:** publishing a `provisioning_failed` event for
-`ORD-88213` (manually, via a producer script) triggers a full diagnosis
-with zero API calls involved, visible on `diagnosis.events`.
+**Definition of done — isolated first, then integrated:**
+- `tests/test_consumer.py` — the consumer's own handler function called
+  directly with a **constructed fake event payload** and a **fake/injected
+  graph invocation** (no real Kafka broker, no real supervisor graph) —
+  verifies the handler correctly parses the event into an `order_id`,
+  calls the graph with it, and publishes to `diagnosis.events`. Same
+  isolation principle as the supervisor's `synthesize_diagnosis` tests
+  (`02-ARCHITECTURE.md` Section 13) — fast, no infrastructure dependency.
+- Full integration test (the original v1 check): publishing a real
+  `provisioning_failed` event for `ORD-88213` via a producer script,
+  against the real Docker Kafka broker and the real compiled supervisor
+  graph, triggers a full diagnosis with zero API calls involved, visible
+  on `diagnosis.events`.
 
 ## Phase 10 — Full observability stack [EXTENDED]
 
@@ -526,18 +565,37 @@ with zero API calls involved, visible on `diagnosis.events`.
 **Definition of done:** one diagnosis request visible end-to-end in a local
 trace viewer (e.g. Jaeger via Docker), not just readable as flat log lines.
 
-## Phase 11 — Bedrock migration [EXTENDED]
+## Phase 11 — AWS hosting migration: Bedrock + API Gateway [EXTENDED]
 
-**Goal:** Section 6's hosting decision, made real.
+**Goal:** Section 6's model-hosting decision and Section 14's ingress
+decision, both made real — paired in one phase since both are "move this
+layer to AWS-managed infra," neither touches agent logic.
 
+**Bedrock (Section 6):**
 - Swap `ChatAnthropic`/`ChatOpenAI` calls for `langchain_aws.ChatBedrock`
   (Claude via Bedrock) across `plan_next_action`, `evaluate_evidence`,
   `synthesize_diagnosis`, and `eval/judge.py`
 - Bedrock Guardrails configuration for PII/content filtering (Section 10)
-- Re-run `eval/run_eval.py` once more — confirm the model swap didn't
-  regress anything
 
-**Definition of done:** eval suite passing against the Bedrock-hosted model.
+**API Gateway (Section 14):**
+- Provision an HTTP API Gateway in front of the FastAPI app's existing
+  deployment
+- Configure an API key + usage plan (throttle limits) — replaces Phase 5's
+  in-app `verify_api_key` dependency and `slowapi` limiter for traffic
+  arriving through the gateway
+- Phase 5's `tests/test_api.py` is untouched — still tests the app's own
+  logic directly via `TestClient`; the gateway's config is verified
+  separately, at deployment time, not via pytest (Section 14's stated
+  testing boundary)
+
+- Re-run `eval/run_eval.py` once more — confirm the Bedrock swap didn't
+  regress anything (API Gateway has no bearing on eval results, since it's
+  purely ingress)
+
+**Definition of done:** eval suite passing against the Bedrock-hosted
+model; a request through the deployed API Gateway (valid key) reaches the
+app and returns a correct diagnosis; a request with no/invalid key is
+rejected by the gateway itself, before it ever reaches the app.
 
 ## Phase 12 — Polish
 
@@ -570,7 +628,7 @@ promise made now.
 | 8 — Neo4j | M |
 | 9 — Kafka | M |
 | 10 — Observability | M |
-| 11 — Bedrock | S |
+| 11 — Bedrock + API Gateway | M |
 | 12 — Polish | S |
 
 ---

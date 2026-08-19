@@ -555,6 +555,19 @@ Not a separate component, a set of tenets the whole codebase follows:
 - **Single agent core, multiple trigger paths.** Section 4's event path and
   the FastAPI path both call the same LangGraph graph — no duplicated logic
   between "sync mode" and "async mode."
+- **Why FastAPI, not Django/Flask — a real mismatch, not a style
+  preference.** Two of the principles just above depend on it directly:
+  async is load-bearing (Section 3.5's `asyncio.gather` tool dispatch needs
+  native `async def` handlers — Flask's/Django's async support is
+  retrofitted, not foundational), and "type safety end-to-end" already
+  means Pydantic models everywhere (`DiagnosisOutput`, `ToolResult`,
+  `SpecialistFinding`) — FastAPI validates against those same models
+  natively, where Flask needs an add-on and Django REST Framework brings
+  its own separate serializer system, meaning two parallel validation
+  layers for no benefit. Django's actual strengths (ORM, admin panel,
+  server-rendered templating) don't apply here either — mock services use
+  plain SQLite by design (Section 12), and the demo UI is Streamlit, not
+  server-rendered pages.
 
 ## 9. Evaluation
 
@@ -582,13 +595,37 @@ silently ignored:
   Chroma + agent) is reasonable to build; Kubernetes/Terraform for "real"
   deployment is named but not designed — genuinely enterprise concerns, but
   orthogonal to the AI engineering skills this project exists to demonstrate.
-- **API authentication / rate limiting on `POST /diagnose`** — currently
-  unaddressed anywhere in this doc. A real deployment can't leave this
-  endpoint open; API-key auth + basic rate limiting would be the minimum.
-  Cheap to actually build (FastAPI supports both trivially) unlike the
-  other items in this list — a reasonable candidate to pull into Core later
-  if there's time, rather than a genuinely hard v2 concern like the others
-  here.
+- ~~API authentication / rate limiting on `POST /diagnose`~~ — **resolved,
+  no longer belongs in this "not designed" list.** Pulled into Core per
+  this section's own earlier note that it was cheap to build — implemented
+  in `04-BUILD-PLAN.md` Phase 5 (API-key auth + `slowapi` rate limiting).
+  Left here, struck through, so the decision history isn't lost.
+- ~~API Gateway pattern~~ — **moved out of this list, now actually designed**
+  — see Section 14. Pairs naturally with the Bedrock migration (both are
+  "move the ingress/hosting layer to AWS-managed" work), and it's cheap to
+  add on top of a system already going AWS-native for model hosting.
+- **CAP theorem tradeoffs** — genuinely not engaged with anywhere in this
+  doc, worth naming rather than pretending it doesn't apply. The one place
+  it would actually matter: **Kafka's replication/acknowledgment settings**
+  (`acks=0/1/all`, in-sync replica count) are a real availability-vs-
+  consistency tradeoff during a broker failure — not designed here, since
+  Phase 9's single-broker KRaft setup has no replication to tune in the
+  first place. Every data store in this project (SQLite-per-service, a
+  single Neo4j Aura instance, local Chroma) is single-node by choice
+  (Section 12), so there's no distributed-consistency tradeoff actually
+  being made at this scale — CAP becomes a real design question only if
+  any of these moved to a genuinely distributed/multi-region deployment,
+  which is out of scope here.
+- **Consistent hashing** — has **no natural home in this architecture**,
+  honestly, not just unaddressed. It solves rebalancing data/load across
+  nodes as they're added/removed — relevant to sharded databases,
+  distributed caches, or partition assignment. Nothing here is sharded:
+  every data store is single-node (see CAP note above). The one place a
+  hashing-based assignment mechanism exists at all is Kafka's own
+  consumer-group partition rebalancing (Phase 9) — but that's handled
+  internally by Kafka's consumer group protocol, not something this
+  project implements by hand. Forcing consistent hashing into this design
+  would be solving a problem this system doesn't have.
 
 ## 11. Decisions (resolved)
 
@@ -642,6 +679,7 @@ data, and what actually backs it. Same Core (simple/local) → Extended
 | Metrics | In-process counters exposed at a `/metrics` endpoint, Prometheus text format | Real Prometheus + Grafana — named, not built |
 | Traces | OpenTelemetry SDK, exported to local console/file | Real trace backend (Jaeger / Tempo / LangSmith) — named, not built |
 | Golden evaluation dataset (`03-EVALUATION.md`) | Versioned JSON fixture file — it's a fixed test set, not runtime data, so it doesn't need a database at all | Same — no production-scale reason to change this |
+| API ingress: auth + rate limiting | In-app — FastAPI `Depends(verify_api_key)` + `slowapi` (Phase 5) | **Amazon API Gateway** (HTTP API type) — native API keys + usage-plan throttling, ahead of the app (Section 14) |
 
 **Why SQLite shows up so often at Core:** consistent, deliberate choice —
 zero operational overhead for local dev/demo, while still being a real
@@ -660,7 +698,8 @@ layers, each needing a different approach:
 | Layer | What's tested | How |
 |---|---|---|
 | **Tool functions** (`get_order_record`, etc.) | Correct HTTP call shape, correct parsing of the mock service's response | Unit tests against the *real* mock FastAPI services (not further-mocked) — since the mock services are already fast, local, and deterministic, there's no need for a second layer of mocking on top of them |
-| **Agent nodes** (`plan_next_action`, `evaluate_evidence`, `synthesize_diagnosis`) | Does the node make the right *decision* given a specific evidence state, independent of which tool implementation is wired in | Unit tests with **fake tools** (plain Python functions returning canned data) injected via the Section 8 DI pattern — this is the concrete payoff of that design principle, not just an abstract claim |
+| **Specialist nodes** (`plan_next_action`, `evaluate_evidence`) | Does the node make the right *decision* given a specific evidence state, independent of which tool implementation is wired in | Unit tests with **fake tools** (plain Python functions returning canned data) injected via the Section 8 DI pattern — the concrete payoff of that design principle |
+| **Supervisor node** (`synthesize_diagnosis`) | Conflict detection/precedence (Section 3.7), the multi-cause pipeline-order rule (FR10), and the `confidence`/`insufficient_evidence` invariant (Section 3.4) — **not** tool behavior, this node never calls a tool | Unit tests that construct a `SupervisorState` **directly**, with hand-crafted `SpecialistFinding` objects (bypassing `dispatch_specialists` and both specialist subgraphs entirely), then call `synthesize_diagnosis` alone. This is what actually makes the supervisor's decision logic testable in isolation — running the full stack end-to-end would test integration, not this logic specifically |
 | **Full specialist / supervisor graphs** | End-to-end behavior for one scenario — does the whole loop converge to the right `DiagnosisOutput` | The golden dataset itself (`03-EVALUATION.md`) *is* this layer — integration tests and evals are the same suite here, not two separate things to maintain |
 
 **Test isolation for the LLM calls specifically:** unit tests for
@@ -675,3 +714,47 @@ for no benefit.
 
 **Framework:** `pytest`, consistent with no new tooling decision needed —
 standard choice, not a differentiator worth deep design discussion here.
+
+## 14. API Gateway — ingress layer [EXTENDED]
+
+**What changes, and what doesn't:** Core's `POST /diagnose` (Phase 5) has
+auth (API key check) and rate limiting built directly into the FastAPI app
+itself — the right call for local dev, where there's no AWS deployment to
+front yet. At Extended, once the system is actually deployed to AWS
+alongside Bedrock (Section 6, Phase 11), **Amazon API Gateway** takes over
+those two concerns at the ingress layer, ahead of the application:
+
+- **Auth** — API Gateway's native API keys + usage plans replace the
+  in-app `X-API-Key` header check. One fewer piece of security logic living
+  inside application code.
+- **Rate limiting / throttling** — API Gateway's built-in throttling
+  (requests-per-second + burst limits, per usage plan) replaces the
+  in-app `slowapi` limiter from Phase 5.
+- **What does NOT change:** the actual diagnosis logic. API Gateway is
+  purely an ingress concern — it sits in front of the FastAPI app and
+  forwards authenticated, rate-limit-passed requests through; the
+  supervisor/specialist/tool logic underneath is completely unaware it
+  exists. Same principle as Bedrock (Section 6): swap the outer layer,
+  core reasoning untouched.
+
+**Type:** **HTTP API**, not REST API — this project has one route
+(`POST /diagnose`) with no need for REST API's request/response
+transformation mapping templates or resource-based policies; HTTP API is
+cheaper and simpler, and covers everything actually needed here.
+
+**Scope boundary, stated deliberately:** this section designs the gateway's
+own role (auth, throttling, routing to the app) — it does **not** design
+the underlying compute topology the gateway forwards to (Lambda vs.
+ECS/Fargate vs. a plain EC2-hosted container). That's the same
+containerization/deployment-topology question Section 10 already named as
+out of scope (Docker Compose locally, Kubernetes/Terraform named but not
+designed) — API Gateway's target is "wherever the FastAPI app ends up
+running," not a new decision about what that is.
+
+**Testing implication, stated explicitly so coverage doesn't look like it
+silently vanished:** API Gateway's own auth/throttling behavior is
+AWS-managed infrastructure — not something this project unit-tests itself,
+the same way DNS or a load balancer's TCP handling wouldn't be. `Phase 5`'s
+`tests/test_api.py` (`TestClient`-based, no AWS involved) keeps validating
+the actual application logic underneath; verifying the deployed gateway's
+config is a manual/deployment-time check, not part of the pytest suite.

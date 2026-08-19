@@ -43,8 +43,8 @@ problem shape are realistic; the systems and data are not real. See
   microservices (each with its own SQLite DB) + 1 knowledge-base tool,
   structured diagnosis output. Builds first.
 - **Extended** — Kafka event-driven trigger, Neo4j knowledge graph, Bedrock
-  hosting, full observability stack, evaluation harness. Builds once Core
-  works.
+  hosting + API Gateway ingress, full observability stack, evaluation
+  harness. Builds once Core works.
 - **Optional / v2** — named honestly, not designed in depth: SageMaker
   triage classifier, guardrails/PII redaction, semantic caching, CI/CD
   eval-gating, containerization/IaC.
