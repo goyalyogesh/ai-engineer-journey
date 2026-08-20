@@ -1,6 +1,6 @@
 # Project 7: Order Diagnosis Agent
 
-**Status:** 📋 Planning complete (requirements, architecture, evaluation, build plan) — awaiting review before any implementation starts.
+**Status:** 🚧 In development — Phases 0-5 of 13 complete (see `05-DEVELOPMENT-LOG.md`). It's a real, runnable HTTP service: `POST /diagnose` returns a correct structured diagnosis for the worked example, auth'd and rate-limited.
 
 ## One-line pitch
 
@@ -35,6 +35,7 @@ problem shape are realistic; the systems and data are not real. See
 | [`03-EVALUATION.md`](03-EVALUATION.md) | Golden dataset, metrics (accuracy, false-confidence rate, tool-call efficiency), LLM-as-judge grading, regression testing |
 | [`04-BUILD-PLAN.md`](04-BUILD-PLAN.md) | 13 phases (0-12), Core → Extended gate, definition of done per phase — **planning only, no implementation started** |
 | [`AGENTS.md`](AGENTS.md) | Context file for any AI agent (implementer or reviewer) working on this project — ground rules, review history, what's already been decided |
+| [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) | Running record of the actual build, phase by phase — what got built, what verification showed, what diverged from the plan and why. Updated as each phase completes. |
 
 ## Scope tiers (see `02-ARCHITECTURE.md` Section 0)
 
@@ -51,7 +52,15 @@ problem shape are realistic; the systems and data are not real. See
 
 ## Status
 
-Requirements, architecture, evaluation, and a phased build plan are all
-drafted — see `04-BUILD-PLAN.md` for the full 13-phase sequence and the
-Core/Extended gate. **Awaiting review and explicit go-ahead before any
-implementation starts.** No code has been written yet, by design.
+Planning complete (requirements, architecture, evaluation, build plan).
+**Implementation in progress** — Phases 0-5 are done and verified:
+scaffolding, mock backend microservices (verified both locally and in
+Docker), the tools layer, the 2 specialist sub-agents, the supervisor
+agent, and the FastAPI serving layer. `POST /diagnose` is a real, running
+HTTP endpoint — API-key auth, per-key rate limiting, and a
+correlation-ID-linked structured log trace of every tool call and graph
+node transition, verified with real `curl` requests against a real running
+server, not just in-process tests. See
+[`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for the running record of
+what's actually been built, and `04-BUILD-PLAN.md` for what's next
+(Phase 6 — evaluation harness).

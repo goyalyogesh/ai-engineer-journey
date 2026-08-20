@@ -715,6 +715,18 @@ for no benefit.
 **Framework:** `pytest`, consistent with no new tooling decision needed —
 standard choice, not a differentiator worth deep design discussion here.
 
+**Coverage:** `pytest-cov`, run via `pytest --cov=agent --cov=api`. Scoped
+to `agent/` and `api/` specifically — not `mock_services/`, which is
+intentionally simple CRUD wrappers around a schema, not the part of the
+system whose correctness this project is actually about. **Reported, not
+gated** — no enforced percentage threshold, since chasing a number (e.g.
+100%) is a vanity metric that doesn't mean correct behavior, the same
+"illustrative, not a production claim" honesty already applied to the eval
+metrics (`03-EVALUATION.md` Section 5). A CI gate enforcing a coverage
+floor is exactly the kind of thing Section 10's named-not-built
+"CI/CD with eval-gated deploys" item would eventually wrap this into — not
+built here, same reasoning as everywhere else that item applies.
+
 ## 14. API Gateway — ingress layer [EXTENDED]
 
 **What changes, and what doesn't:** Core's `POST /diagnose` (Phase 5) has

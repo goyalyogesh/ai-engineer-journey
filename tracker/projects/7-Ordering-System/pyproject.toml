@@ -1,0 +1,37 @@
+[project]
+name = "order-diagnosis-agent"
+version = "0.1.0"
+description = "Multi-agent order diagnosis system (see 01-REQUIREMENTS.md and 02-ARCHITECTURE.md)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    "langchain",
+    "langchain-openai",
+    "langchain-anthropic",
+    "langchain-chroma",
+    "pydantic",
+    "httpx",
+    "python-dotenv",
+    "slowapi",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent*", "api*", "mock_services*", "eval*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

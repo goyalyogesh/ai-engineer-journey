@@ -108,8 +108,8 @@ order-diagnosis-agent/
    ```
 3. `pyproject.toml` (or `requirements.txt`) — `fastapi`, `uvicorn`,
    `langgraph`, `langchain`, `langchain-openai`, `langchain-anthropic`,
-   `langchain-chroma`, `pydantic`, `pytest`, `pytest-asyncio`, `httpx`,
-   `python-dotenv`.
+   `langchain-chroma`, `pydantic`, `pytest`, `pytest-asyncio`, `pytest-cov`,
+   `httpx`, `python-dotenv`.
 4. `docker-compose.yml` — one service block per mock backend (Phase 1),
    ports `8001`-`8004`, empty `command:` placeholders until Phase 1 fills
    them in.
@@ -124,6 +124,24 @@ collected, 0 errors.
 
 **Goal:** 4 independently deployable FastAPI services, each with its own
 SQLite DB (`02-ARCHITECTURE.md` Section 3.3, Section 12).
+
+**Each service also needs its own `requirements.txt` and `Dockerfile`**
+(missing from this plan's original v1/v2 drafts — surfaced during actual
+Phase 1 implementation, added here retroactively). Two things worth being
+deliberate about, not accidental:
+- **Each service's `requirements.txt` is minimal** (`fastapi`, `uvicorn`,
+  `pydantic`, `python-dotenv` — not the full agent stack). Bundling
+  `langgraph`/`langchain`/`chromadb` into a mock CRUD service's container
+  would be wasteful and would also quietly violate the "own process, own
+  container" microservices independence already committed to in Section 3.3
+  — these services genuinely don't need any of that.
+- **The Dockerfile recreates the `mock_services.<name>` package path
+  inside the image**, matching how the service is imported locally
+  (`from mock_services.crm.main import app` — used by both the pytest
+  suite and manual `uvicorn` runs). The alternative (plain, non-package
+  imports just for Docker) would make the containerized service behave
+  differently from local dev, which is exactly the kind of divergence this
+  project has been actively hunting down in its documentation.
 
 **Schemas — one SQLite table per service:**
 
@@ -269,6 +287,29 @@ class SpecialistFinding(BaseModel):
     preliminary_assessment: str
 ```
 
+**Surfaced during actual Phase 3 implementation, added here retroactively:**
+`SpecialistState` above is missing 3 fields a real LangGraph implementation
+needs. Nodes only communicate through state — this 3-field version has no
+way for `plan_next_action` to tell `execute_tool` what it decided to call,
+or for `evaluate_evidence` to tell `should_continue`/the eventual
+`SpecialistFinding` what it concluded. The actual `agent/state.py` adds:
+```python
+class SpecialistState(TypedDict):
+    order_id: str
+    evidence: list[ToolResult]
+    iterations: int
+    pending_tool_calls: list[dict]  # set by plan_next_action, consumed by execute_tool
+    complete: bool                   # set by evaluate_evidence; should_continue reads this
+    preliminary_assessment: str      # set by evaluate_evidence once complete=True
+```
+
+**Also implemented, not originally specified here:** the graph-wiring and
+node-factory logic ended up shared between `billing_crm.py` and
+`network.py` in a new `agent/specialists/_shared.py` (not in this doc's
+original repo tree), rather than duplicated verbatim in both files, since
+the two specialists really are "the same shape" as this section already
+says — only the tool set and role description differ.
+
 **Node signatures (same shape in both specialist files):**
 ```python
 async def plan_next_action(state: SpecialistState) -> SpecialistState: ...
@@ -341,6 +382,22 @@ checkpointer = SqliteSaver.from_conn_string("agent_checkpoints.db")  # Section 1
 compiled = supervisor_graph.compile(checkpointer=checkpointer)
 ```
 
+**Corrected during actual Phase 4 implementation:** `SqliteSaver` above is
+the *sync* checkpointer — it raises `NotImplementedError` on `aget_tuple`
+and every other async method, and this graph's nodes are `async def`,
+invoked via `.ainvoke()` throughout. The real implementation uses
+`langgraph.checkpoint.sqlite.aio.AsyncSqliteSaver` instead (added to
+`pyproject.toml`: `langgraph-checkpoint-sqlite`), which is itself an
+async context manager — it can't be entered at plain module-import time
+(no running event loop yet), so `agent/supervisor.py` builds the real,
+checkpointed graph lazily on first use via an async
+`get_supervisor_graph()` function and caches it, rather than eagerly at
+import time as this pseudocode implies. Verified for real: a round-trip
+test creates a checkpoint, then reads it back via `graph.aget_state(config)`
+and confirms the persisted state matches (`05-DEVELOPMENT-LOG.md`). The db
+path is also configurable (`SUPERVISOR_CHECKPOINT_DB`, added to
+`.env.example`), defaulting to `agent_checkpoints.db` when unset.
+
 **Why only the supervisor gets a checkpointer, not each specialist —
 stated explicitly, since the asymmetry looks like an oversight otherwise:**
 the `interrupt()`-readiness commitment (Section 3.1) is about a *future*
@@ -366,6 +423,29 @@ supervisor's decision point is a plausible future pause/resume boundary.
    `.with_structured_output()` (same mechanism as
    `16Langchain-Deep-Interview.ipynb`), which triggers the
    `confidence`/`insufficient_evidence` validator (Section 3.4) automatically.
+
+**Revised during actual Phase 4 implementation — steps 2-4 above are
+split across an LLM call and plain Python, not one `.with_structured_output()`
+call doing everything:** `02-ARCHITECTURE.md` Section 3.7 states the
+precedence rule exists to be "an auditable design decision, not an
+implicit bias buried in a prompt" — a single LLM call asked to silently
+apply both the precedence rule *and* the pipeline-order rule inside its
+own reasoning would be exactly that implicit-bias-in-a-prompt outcome,
+and untestable in the "milliseconds, no LLM" way the Definition of Done
+below asks for. The actual split:
+- One `.with_structured_output(SynthesisAnalysis)` call reads both
+  specialists' raw evidence and *classifies* each finding (does it show a
+  real problem, what pipeline stage, technical or administrative, plus a
+  one-line summary/recommended action) and whether the two findings
+  directly conflict about the same fact — a genuine reasoning task, kept
+  appropriately narrow.
+- `apply_precedence_and_pipeline_rules()` — plain, synchronous Python,
+  no LLM — takes that classification and mechanically applies the
+  precedence rule (conflict case) or the pipeline-order rule (multiple-
+  true-causes case) to produce the final `DiagnosisOutput`. This is what
+  makes the rules themselves real, auditable code, and is exactly what
+  the Definition of Done's "fast, isolated... milliseconds" unit tests
+  below actually exercise.
 
 **Definition of done — two distinct test types, per `02-ARCHITECTURE.md`
 Section 13's revised testing table:**
@@ -411,6 +491,42 @@ needed) covers this same set automatically: valid key succeeds, missing/
 wrong key returns 401, and exceeding the rate limit returns 429 — the API
 layer's own contract, independent of whether the agent logic underneath it
 is real or stubbed.
+
+**Filled in / corrected during actual Phase 5 implementation:**
+- **Rate limiting is keyed by the `X-API-Key` header value, not client
+  IP.** `slowapi`'s default `key_func` is `get_remote_address` — but this
+  section's own "10 req/min **per API key**" wording means the limiter
+  needs a custom `key_func` that reads the header, not the caller's IP.
+- **The supervisor graph is obtained through a real FastAPI dependency**
+  (`get_graph_dependency`, wrapping Phase 4's `get_supervisor_graph()`),
+  not called directly inside the route handler — this is exactly what
+  makes the DoD's "independent of whether the agent logic underneath it
+  is real or stubbed" claim literally true: tests swap it via
+  `app.dependency_overrides`, no monkeypatching of internals needed.
+- **`correlation_id` doubles as the LangGraph checkpointer's `thread_id`**
+  — one generated UUID per request links that request's structured log
+  lines to its checkpointed graph state, rather than tracking two
+  separate IDs for the same request.
+- **The FastAPI `lifespan` now owns the checkpointer's full lifecycle** —
+  opens it at startup (`await get_supervisor_graph()`, warming the graph
+  before the first request instead of paying that cost on it) and closes
+  it at shutdown (`await _checkpointer_cm.__aexit__(...)`). This is the
+  lifecycle ownership Phase 4's `agent/supervisor.py` comment explicitly
+  deferred to "Phase 5's FastAPI lifespan" — now built.
+- **Structured logging (`agent/observability.py`, new file, not in the
+  original repo tree)** — this section named the *requirement* (a JSON
+  line per tool call/node transition, correlation-ID-linked) but not the
+  mechanism. Implemented via a `contextvars.ContextVar` holding the
+  current request's `correlation_id` (set once in the `/diagnose` handler,
+  read by every log call without threading it through every Phase 2-4
+  function signature) plus a `log_node_transitions` decorator applied to
+  each specialist/supervisor node factory's returned function, and a
+  `log_event` call added directly inside `agent/tools.py`'s
+  `call_with_retry` (the one place every tool call actually returns).
+  Verified for real: a live curl request against the running app produced
+  a 47-line log, every line sharing one `correlation_id`, spanning both
+  specialists' full loops through final synthesis
+  (`05-DEVELOPMENT-LOG.md`).
 
 ## Phase 6 — Evaluation harness [CORE]
 

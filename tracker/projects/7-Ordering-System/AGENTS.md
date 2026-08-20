@@ -19,14 +19,27 @@ if you haven't.**
 
 ## Current status — read before doing anything else
 
-**Planning is complete. Zero implementation code exists.** Requirements,
-architecture, evaluation, and a 13-phase build plan are all fully drafted
-and have been through 4 review passes (see "Review history" below).
+**Planning is complete and implementation is in progress.** Requirements,
+architecture, evaluation, and a 13-phase build plan are fully drafted and
+have been through 4 review passes (see "Review history" below). **Phases
+0-5 (scaffolding, mock backend microservices, tools layer, specialist
+sub-agents, supervisor agent, FastAPI serving layer) are done and
+verified** — this is now a real, runnable HTTP service: `POST /diagnose`
+with a valid `X-API-Key` runs the full multi-agent loop (dispatch, tool
+calling, conflict/pipeline-order synthesis, checkpointing) and returns a
+correct structured diagnosis for the `ORD-88213` worked example, verified
+against real running processes with `curl`, not just `TestClient`. See
+[`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for exactly what exists
+and what was verified, phase by phase. Docker itself has been verified for
+real (`docker compose config`/`build`/`up`, plus the worked example
+reproduced against the running containers).
 
-**If you are an implementing agent: do not write implementation code unless
-the human running this session has explicitly said to start.** This applies
-regardless of how complete or "ready to build" the plan looks — completeness
-of the plan is not authorization to execute it.
+**If you are an implementing agent: do not jump ahead of the current phase
+recorded in `05-DEVELOPMENT-LOG.md` without the human running this session
+explicitly saying to.** The rule isn't "don't write code" anymore (Phase 0
+exists) — it's "don't skip phases or cross the Core→Extended gate early."
+Read the development log first to know exactly where the project currently
+stands before writing anything.
 
 ## Document map (read in this order)
 
@@ -37,6 +50,7 @@ of the plan is not authorization to execute it.
 | [`02-ARCHITECTURE.md`](02-ARCHITECTURE.md) | Full system design — read Section 0 (scope tiers) and Section 3 (core agent design) first |
 | [`03-EVALUATION.md`](03-EVALUATION.md) | Golden dataset, metrics, LLM-as-judge, regression strategy |
 | [`04-BUILD-PLAN.md`](04-BUILD-PLAN.md) | 13 phases with exact schemas/signatures/seed data — the actual build sequence |
+| [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) | **Read this to know what phase the project is actually at right now** — running record of what's been built and verified, phase by phase |
 
 ## Non-negotiable ground rules
 
@@ -74,6 +88,16 @@ These aren't preferences — violating them undoes the point of the project:
   conflict-resolution (Section 3.7) and the multi-cause pipeline-order rule
   (Section 3.7, FR10) to their raw evidence, produces the final
   `DiagnosisOutput`. Does **not** loop — single dispatch → synthesize pass.
+  `synthesize_diagnosis` itself is 2 steps, deliberately not 1: an LLM call
+  *classifies* each specialist's raw evidence (real problem? which stage?
+  technical or administrative?), then plain, LLM-free Python
+  (`apply_precedence_and_pipeline_rules` in `agent/supervisor.py`)
+  mechanically applies the precedence/pipeline-order rules to that
+  classification — Section 3.7 wants these rules "auditable... not an
+  implicit bias buried in a prompt," so the rule itself is real code, not
+  something trusted to an LLM's judgment inside one opaque call. If you're
+  reviewing this and it looks like it should be one `.with_structured_output()`
+  call — it deliberately isn't; see `05-DEVELOPMENT-LOG.md`'s Phase 4 entry.
 - **Each specialist:** its own `plan → execute → evaluate` loop, capped at
   `SPECIALIST_MAX_ITERATIONS = 3`, dispatches its own tools in parallel via
   `asyncio.gather` when inputs allow (I/O-bound work — not threads/processes,
@@ -87,18 +111,46 @@ These aren't preferences — violating them undoes the point of the project:
   named for Extended), Bedrock-hosted Claude + API Gateway ingress at
   Extended (direct API + in-app auth/rate-limit at Core, Section 14),
   pytest (testing strategy, Section 13).
+- **API layer (`api/main.py`, Phase 5):** `POST /diagnose`, header-based
+  `X-API-Key` auth, `slowapi` rate limiting keyed by API key (not IP),
+  `correlation_id` = the LangGraph checkpointer's `thread_id`, structured
+  JSON-lines logging (`agent/observability.py`) via a `contextvars`-based
+  correlation ID rather than threading it through every function
+  signature. FastAPI `lifespan` owns the checkpointer's open/close.
 
 ## Review history — what's already been checked, so you don't re-flag it
 
-This project has been through **4 full review passes** by the assistant
-that helped build it. Known classes of issue that were found and fixed:
-cross-reference drift after section renumbering, stale numbers after scope
-changes (archetype counts, scenario counts), a real Pydantic type
-contradiction (`expected_root_cause` needed to allow `None`), an
-architectural gap where no rule existed for "multiple true causes" vs.
-"conflicting evidence" (now FR10), and — this pass — actual content loss
-(the data-model/join-problem section was dropped during a rewrite and only
-referenced by dangling pointers; restored as `01-REQUIREMENTS.md` Section 9).
+This project has been through **4 full review passes** (planning-phase,
+docs only) by the assistant that helped build it. Known classes of issue
+that were found and fixed: cross-reference drift after section
+renumbering, stale numbers after scope changes (archetype counts, scenario
+counts), a real Pydantic type contradiction (`expected_root_cause` needed
+to allow `None`), an architectural gap where no rule existed for "multiple
+true causes" vs. "conflicting evidence" (now FR10), and — that pass —
+actual content loss (the data-model/join-problem section was dropped
+during a rewrite and only referenced by dangling pointers; restored as
+`01-REQUIREMENTS.md` Section 9).
+
+**Implementation-phase corrections (Phases 0-4), already resolved — don't
+re-flag these either:** `04-BUILD-PLAN.md`'s pseudocode named the *sync*
+`SqliteSaver` for the supervisor's checkpointer, which doesn't support the
+async methods this graph's `.ainvoke()`-only nodes need — corrected to
+`AsyncSqliteSaver`, verified with a real disk round-trip test (Phase 4).
+`SpecialistState`'s original 3-field pseudocode had no way for
+`plan_next_action` to hand its decision to `execute_tool`, or for
+`evaluate_evidence`'s verdict to reach `should_continue` — 3 more fields
+added, documented in `agent/state.py` and retroactively in
+`04-BUILD-PLAN.md` (Phase 3). `synthesize_diagnosis` was redesigned from
+one `.with_structured_output()` call into an LLM-classification step +
+deterministic Python rule-application step (Phase 4, see the "Condensed
+architecture" section above) — a deliberate design improvement over the
+original pseudocode, not a deviation to flag. Phase 5 added
+`agent/observability.py` (not in the original repo tree — structured
+logging's mechanism was never specified, only the requirement) and keyed
+`slowapi` rate limiting by API key instead of its IP-based default, to
+actually match this doc's own "10 req/min per API key" wording. Full
+reasoning for all of these is in `05-DEVELOPMENT-LOG.md`'s Phase 3/4/5
+entries.
 
 **If you're reviewing this project:** the scope boundaries (mocked systems,
 no write access, Core/Extended/Optional tiers) are deliberate, reasoned
