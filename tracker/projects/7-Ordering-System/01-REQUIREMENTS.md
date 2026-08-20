@@ -127,9 +127,14 @@ are framed honestly as **illustrative, not measured-in-production**:
       Section 1.
 - [x] Confidence scoring — numeric or categorical? **Resolved** — categorical
       (`low`/`medium`/`high`), `02-ARCHITECTURE.md` Section 11.
-- [ ] Should the demo UI show the agent's reasoning step-by-step live (more
+- [x] Should the demo UI show the agent's reasoning step-by-step live (more
       impressive for a coworker demo, more engineering work) or just the
-      final diagnosis (simpler, less "wow factor")? **Still open.**
+      final diagnosis (simpler, less "wow factor")? **Resolved** — both,
+      via a toggle defaulting to the live step-by-step trace. Decided at
+      Phase 7 once Phase 5's logging and Phase 6's correlation-ID header
+      made the "more engineering work" side of the tradeoff basically
+      free (`04-BUILD-PLAN.md` Phase 7, `05-DEVELOPMENT-LOG.md`'s Phase 7
+      entry).
 
 ## 9. Data model — the cross-system join problem (restored)
 

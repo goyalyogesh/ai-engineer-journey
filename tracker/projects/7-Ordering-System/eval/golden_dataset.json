@@ -1,0 +1,191 @@
+[
+  {
+    "scenario_id": "known-error-1",
+    "order_id": "ORD-88213",
+    "archetype": "provisioning_failure_known_code",
+    "expected_root_cause": "No circuit was assigned in inventory for the service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "known-error-2",
+    "order_id": "ORD-90010",
+    "archetype": "provisioning_failure_known_code",
+    "expected_root_cause": "No circuit was assigned in inventory for the service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "known-error-3",
+    "order_id": "ORD-90011",
+    "archetype": "provisioning_failure_known_code",
+    "expected_root_cause": "No circuit was assigned in inventory for the service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "unknown-error-1",
+    "order_id": "ORD-90001",
+    "archetype": "provisioning_failure_unknown_code",
+    "expected_root_cause": null,
+    "expected_confidence_min": "low",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": true
+  },
+  {
+    "scenario_id": "unknown-error-2",
+    "order_id": "ORD-90012",
+    "archetype": "provisioning_failure_unknown_code",
+    "expected_root_cause": null,
+    "expected_confidence_min": "low",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": true
+  },
+  {
+    "scenario_id": "unknown-error-3",
+    "order_id": "ORD-90013",
+    "archetype": "provisioning_failure_unknown_code",
+    "expected_root_cause": null,
+    "expected_confidence_min": "low",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": true
+  },
+  {
+    "scenario_id": "billing-hold-1",
+    "order_id": "ORD-90002",
+    "archetype": "billing_hold_no_provisioning_issue",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "billing-hold-2",
+    "order_id": "ORD-90014",
+    "archetype": "billing_hold_no_provisioning_issue",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "billing-hold-3",
+    "order_id": "ORD-90015",
+    "archetype": "billing_hold_no_provisioning_issue",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "inventory-mismatch-1",
+    "order_id": "ORD-90003",
+    "archetype": "inventory_address_mismatch",
+    "expected_root_cause": "The assigned circuit is registered at a different address than the order's service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "inventory-mismatch-2",
+    "order_id": "ORD-90016",
+    "archetype": "inventory_address_mismatch",
+    "expected_root_cause": "The assigned circuit is registered at a different address than the order's service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "inventory-mismatch-3",
+    "order_id": "ORD-90017",
+    "archetype": "inventory_address_mismatch",
+    "expected_root_cause": "The assigned circuit is registered at a different address than the order's service address",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "multiple-causes-1",
+    "order_id": "ORD-90004",
+    "archetype": "multiple_plausible_causes",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "multiple-causes-2",
+    "order_id": "ORD-90018",
+    "archetype": "multiple_plausible_causes",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "multiple-causes-3",
+    "order_id": "ORD-90019",
+    "archetype": "multiple_plausible_causes",
+    "expected_root_cause": "An active billing hold (declined payment) is blocking the order",
+    "expected_confidence_min": "high",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "clean-order-1",
+    "order_id": "ORD-90005",
+    "archetype": "clean_order_no_failure",
+    "expected_root_cause": "No issue found -- the order provisioned successfully",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "clean-order-2",
+    "order_id": "ORD-90020",
+    "archetype": "clean_order_no_failure",
+    "expected_root_cause": "No issue found -- the order provisioned successfully",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "clean-order-3",
+    "order_id": "ORD-90021",
+    "archetype": "clean_order_no_failure",
+    "expected_root_cause": "No issue found -- the order provisioned successfully",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "get_inventory_status"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "conflict-1",
+    "order_id": "ORD-90006",
+    "archetype": "conflicting_evidence",
+    "expected_root_cause": "Provisioning reports a blocking condition despite billing showing no active hold -- the technical system's finding, per the precedence rule",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "conflict-2",
+    "order_id": "ORD-90022",
+    "archetype": "conflicting_evidence",
+    "expected_root_cause": "Provisioning reports a blocking condition despite billing showing no active hold -- the technical system's finding, per the precedence rule",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": false
+  },
+  {
+    "scenario_id": "conflict-3",
+    "order_id": "ORD-90023",
+    "archetype": "conflicting_evidence",
+    "expected_root_cause": "Provisioning reports a blocking condition despite billing showing no active hold -- the technical system's finding, per the precedence rule",
+    "expected_confidence_min": "medium",
+    "expected_evidence_tools": ["get_order_record", "get_billing_status", "get_provisioning_log", "search_knowledge_base"],
+    "expected_insufficient_evidence": false
+  }
+]

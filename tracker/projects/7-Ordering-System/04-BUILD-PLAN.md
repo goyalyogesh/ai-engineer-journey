@@ -566,6 +566,13 @@ first 3 (rest follow the same shape, ~3 more per archetype):
 ]
 ```
 
+**Corrected during actual Phase 6 implementation:** the `conflict-1`
+example above (`expected_insufficient_evidence: true`) is wrong for this
+specific conflict shape — see `03-EVALUATION.md`'s Phase 6 correction note
+for the full reasoning. The real `eval/golden_dataset.json` expects a
+*resolved*, medium-confidence diagnosis instead, matching
+`agent/supervisor.py`'s actual precedence-rule behavior (Phase 4).
+
 **`eval/judge.py`** — LLM-as-judge (Section 3's prompt from
 `03-EVALUATION.md`), separate model call from the agent's own reasoning.
 
@@ -583,6 +590,21 @@ Phase 1's DBs (idempotently), call `POST /diagnose`, collect results, run
 runs all 20-25 scenarios end-to-end and prints a real metrics report.
 Numbers don't need to be perfect, but every metric must be measured. Any
 FR6/FR9 scenario that fails gets fixed here, before Phase 8.
+
+**Met, with real fixes along the way — see `05-DEVELOPMENT-LOG.md`'s Phase
+6 entry for the full story:** running this for real against `ORD-90001`
+(an unknown provisioning error code) surfaced a genuine FR6 violation —
+the agent confidently fabricated a root cause instead of reporting
+`insufficient_evidence`. Root cause: `search_knowledge_base` had no
+relevance floor (vector search always returns its *closest* match, even
+when nothing actually explains the query). Fixed at the tool layer
+(`agent/tools.py`'s `exact_match_found`, a literal substring check — more
+reliable than embedding distance for exact tokens like error codes) and
+the classification layer (`agent/supervisor.py`'s new
+`SpecialistReading.cause_understood` field, plus a deterministic
+`_enforce_kb_grounding()` cross-check, since the classifier LLM didn't
+reliably honor the signal on its own). Insufficient-evidence recall went
+from 0% to 100% across the fix; root cause accuracy from 61% to 72%.
 
 ## Phase 7 — Demo UI [CORE]
 

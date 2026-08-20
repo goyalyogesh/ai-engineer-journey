@@ -74,6 +74,23 @@ async def test_search_knowledge_base():
     assert result.success is True
     sources = {r["source"] for r in result.data["results"]}
     assert "err-4471" in sources
+    assert result.data["exact_match_found"] is True
+
+
+async def test_search_knowledge_base_no_match_for_unknown_error_code():
+    # 05-DEVELOPMENT-LOG.md's Phase 6 finding: vector search always
+    # returns its closest documents, even for an error code the KB has
+    # never seen -- exact_match_found is the deterministic signal that
+    # distinguishes "genuine explanation" from "coincidentally closest".
+    result = await search_knowledge_base.ainvoke({"query": "ERR_9999"})
+    assert result.success is True
+    assert result.data["exact_match_found"] is False
+
+
+async def test_search_knowledge_base_exact_match_not_applicable_for_non_code_queries():
+    result = await search_knowledge_base.ainvoke({"query": "why is provisioning slow"})
+    assert result.success is True
+    assert result.data["exact_match_found"] is None
 
 
 async def test_search_knowledge_base_degrades_without_api_key(monkeypatch):

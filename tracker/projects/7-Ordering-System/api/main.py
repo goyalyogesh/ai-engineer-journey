@@ -7,7 +7,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -76,7 +76,10 @@ async def get_graph_dependency():
 @app.post("/diagnose", dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 async def diagnose(
-    request: Request, body: DiagnoseRequest, graph=Depends(get_graph_dependency)
+    request: Request,
+    body: DiagnoseRequest,
+    response: Response,
+    graph=Depends(get_graph_dependency),
 ) -> DiagnosisOutput:
     # correlation_id doubles as the LangGraph thread_id -- one ID cleanly
     # links a request's structured log lines (agent/observability.py) to
@@ -86,6 +89,11 @@ async def diagnose(
     try:
         config = {"configurable": {"thread_id": correlation_id}}
         result = await graph.ainvoke(initial_supervisor_state(body.order_id), config=config)
+        # Exposed as a response header (not folded into the DiagnosisOutput
+        # body, which Phase 5 already committed to as the return type) so
+        # Phase 6's eval harness can pull this one request's log lines back
+        # out for the evidence-citation and tool-call-efficiency metrics.
+        response.headers["X-Correlation-Id"] = correlation_id
         return result["diagnosis"]
     finally:
         correlation_id_var.reset(token)

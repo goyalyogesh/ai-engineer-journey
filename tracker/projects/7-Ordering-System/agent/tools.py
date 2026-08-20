@@ -9,6 +9,7 @@ true, not just aspirational (Section 3.3).
 """
 import asyncio
 import os
+import re
 import time
 
 import httpx
@@ -209,6 +210,22 @@ def _get_vectorstore():
     return _vectorstore
 
 
+# Vector search always returns its *closest* documents, even when nothing
+# in the knowledge base actually explains the query (e.g. an error code
+# the KB has never seen) -- there's no relevance floor by default. Found
+# during real Phase 6 eval verification: this let the agent confidently
+# reuse ERR_4471's explanation for the unrelated, unknown ERR_9999, since
+# both queries scored similarly close to the same document (short,
+# structurally similar technical codes don't embed far apart). A
+# similarity-score threshold turned out too fragile to reliably separate
+# "genuine match" from "coincidental closest neighbor" for terse codes
+# like this -- so instead: error codes are exact, well-defined tokens, not
+# natural-language concepts needing fuzzy matching, so a literal substring
+# check is a deterministic, much more reliable relevance signal here than
+# trusting embedding distance.
+_ERROR_CODE_PATTERN = re.compile(r"ERR_[A-Z0-9_]+", re.IGNORECASE)
+
+
 async def _search_kb(tool_name: str, query: str) -> ToolResult:
     start = time.monotonic()
     if not os.environ.get("OPENAI_API_KEY"):
@@ -221,11 +238,19 @@ async def _search_kb(tool_name: str, query: str) -> ToolResult:
         )
     store = _get_vectorstore()
     results = await asyncio.to_thread(store.similarity_search, query, k=3)
+
+    query_codes = {m.upper() for m in _ERROR_CODE_PATTERN.findall(query)}
+    exact_match_found = (
+        any(any(code in doc.page_content.upper() for code in query_codes) for doc in results)
+        if query_codes else None  # query wasn't about a specific error code -- not applicable
+    )
+
     data = {
         "results": [
             {"content": doc.page_content, "source": doc.metadata.get("source")}
             for doc in results
-        ]
+        ],
+        "exact_match_found": exact_match_found,
     }
     return ToolResult(
         tool_name=tool_name, success=True, data=data, error=None,

@@ -16,6 +16,7 @@ dependencies = [
     "httpx",
     "python-dotenv",
     "slowapi",
+    "streamlit",
 ]
 
 [project.optional-dependencies]

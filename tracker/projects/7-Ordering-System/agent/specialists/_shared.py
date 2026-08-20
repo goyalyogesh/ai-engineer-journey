@@ -55,8 +55,12 @@ def build_plan_prompt(role: str, order_id: str, evidence: list[ToolResult]) -> s
         "Decide which of your available tools to call next to investigate "
         "further. You may call more than one tool at once if their inputs "
         "are already available from the evidence above (parallel tool "
-        "dispatch, Section 3.5). If you already have enough evidence from "
-        "your own tools, don't call anything else."
+        "dispatch, Section 3.5).\n\n"
+        "If a search_knowledge_base result has exact_match_found=false, "
+        "the knowledge base does NOT actually explain what you're "
+        "investigating (it only returned its closest, unrelated match) -- "
+        "don't stop there. Call your other tools to keep investigating "
+        "before concluding you have enough evidence."
     )
 
 
@@ -79,7 +83,12 @@ def build_evaluate_prompt(role: str, order_id: str, evidence: list[ToolResult]) 
         "Is your own investigation (using only your own tools) complete "
         "enough to hand off a preliminary assessment to the supervisor? "
         "Give a short preliminary_assessment either way, based on what "
-        "you've found so far."
+        "you've found so far.\n\n"
+        "If a search_knowledge_base result has exact_match_found=false, "
+        "treat that as the knowledge base having NO explanation for the "
+        "specific fact you're investigating -- its closest match is not a "
+        "real answer. Say so plainly in your preliminary_assessment rather "
+        "than reporting it as a confirmed cause."
     )
 
 

@@ -19,27 +19,31 @@ if you haven't.**
 
 ## Current status — read before doing anything else
 
-**Planning is complete and implementation is in progress.** Requirements,
+**Planning is complete. Core is complete (Phases 0-7 of 13).** Requirements,
 architecture, evaluation, and a 13-phase build plan are fully drafted and
-have been through 4 review passes (see "Review history" below). **Phases
-0-5 (scaffolding, mock backend microservices, tools layer, specialist
-sub-agents, supervisor agent, FastAPI serving layer) are done and
-verified** — this is now a real, runnable HTTP service: `POST /diagnose`
-with a valid `X-API-Key` runs the full multi-agent loop (dispatch, tool
-calling, conflict/pipeline-order synthesis, checkpointing) and returns a
-correct structured diagnosis for the `ORD-88213` worked example, verified
-against real running processes with `curl`, not just `TestClient`. See
+have been through 4 review passes (see "Review history" below). Every Core
+phase is done and verified: scaffolding, mock backend microservices, the
+tools layer, the 2 specialist sub-agents, the supervisor agent, the
+FastAPI serving layer, a real 21-scenario evaluation harness (with 3 real
+agent-quality bugs found and fixed by actually running it), and a
+Streamlit demo UI with a live step-by-step agent trace. `POST /diagnose`
+with a valid `X-API-Key` runs the full multi-agent loop end-to-end and
+returns a correct structured diagnosis, verified against real running
+processes with `curl` and a real browser, not just `TestClient`. See
 [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for exactly what exists
 and what was verified, phase by phase. Docker itself has been verified for
 real (`docker compose config`/`build`/`up`, plus the worked example
 reproduced against the running containers).
 
+**The Core → Extended gate is now active.** Per `04-BUILD-PLAN.md`'s
+sequencing principle, Phase 8 (Neo4j) onward does not start until the
+human running this session explicitly says to move into Extended — Core
+being "done" is not itself permission to keep going.
+
 **If you are an implementing agent: do not jump ahead of the current phase
 recorded in `05-DEVELOPMENT-LOG.md` without the human running this session
-explicitly saying to.** The rule isn't "don't write code" anymore (Phase 0
-exists) — it's "don't skip phases or cross the Core→Extended gate early."
-Read the development log first to know exactly where the project currently
-stands before writing anything.
+explicitly saying to.** Read the development log first to know exactly
+where the project currently stands before writing anything.
 
 ## Document map (read in this order)
 
@@ -148,8 +152,20 @@ original pseudocode, not a deviation to flag. Phase 5 added
 `agent/observability.py` (not in the original repo tree — structured
 logging's mechanism was never specified, only the requirement) and keyed
 `slowapi` rate limiting by API key instead of its IP-based default, to
-actually match this doc's own "10 req/min per API key" wording. Full
-reasoning for all of these is in `05-DEVELOPMENT-LOG.md`'s Phase 3/4/5
+actually match this doc's own "10 req/min per API key" wording. Phase 6
+found and fixed a real FR6 violation via the eval harness itself (not
+review, not assumption): `search_knowledge_base` had no relevance floor,
+so an unknown provisioning error code got confidently "explained" using a
+different, unrelated error code's real KB entry. Fixed with a
+deterministic `exact_match_found` signal (`agent/tools.py`) plus a new
+`SpecialistReading.cause_understood` field and a code-level
+`_enforce_kb_grounding()` cross-check (`agent/supervisor.py`) — prompt-only
+fixes were tried first and didn't reliably work. Insufficient-evidence
+recall went 0% → 100% across the fix. Phase 6 also corrected the
+golden dataset's own "conflicting evidence" archetype, which had
+originally expected `insufficient_evidence=True` in direct contradiction
+of Phase 4's own already-tested precedence-resolution behavior. Full
+reasoning for all of these is in `05-DEVELOPMENT-LOG.md`'s Phase 3-7
 entries.
 
 **If you're reviewing this project:** the scope boundaries (mocked systems,
@@ -165,8 +181,17 @@ pass, which this project has already deliberately scoped and explained.
 
 ## Known open items (not yet resolved — fair game for a reviewer)
 
-- `01-REQUIREMENTS.md` Section 8: whether the demo UI (Phase 7) should show
-  live step-by-step agent reasoning or just the final diagnosis — explicitly
-  deferred to build time.
+- `01-REQUIREMENTS.md` Section 8's UI question is now resolved (Phase 7) —
+  no longer open.
+- **Real, measured, deliberately-not-chased eval limitations (Phase 6):**
+  insufficient-evidence precision is 60% (2 of the 21 golden scenarios
+  still trigger `insufficient_evidence` when they shouldn't), and both
+  specialists call more tools than `expected_evidence_tools` suggests
+  (some redundant re-calls of the same tool across planning iterations —
+  a cost/efficiency issue, not a correctness one). Consistent with
+  `03-EVALUATION.md` Section 5's explicit "illustrative, not a production
+  accuracy claim" framing — these are real numbers, reported honestly, not
+  bugs left unfixed by oversight. See `05-DEVELOPMENT-LOG.md`'s Phase 6
+  entry for the full before/after picture.
 - Nothing else is currently marked open across the 4 docs as of this file's
   writing — if you find something that contradicts that, it's a real finding.

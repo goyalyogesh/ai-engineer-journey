@@ -34,6 +34,25 @@ Target: ~3-4 scenarios per archetype, ~20-25 total (7 archetypes now, after
 adding "conflicting evidence") — enough to catch systematic failure modes
 without needing hundreds of hand-built cases.
 
+**Corrected during actual Phase 6 implementation, worth being explicit
+about:** the "conflicting evidence" archetype's golden-dataset entries
+originally expected `insufficient_evidence=True` (04-BUILD-PLAN.md
+Phase 6's own example). That's wrong for *this* archetype's specific
+shape (a technical system's finding vs. an administrative system's clean
+record, e.g. `ERR_BILL_MISMATCH`) — Section 3.7's precedence rule exists
+specifically to *resolve* exactly this kind of conflict (technical beats
+administrative), not to trigger `insufficient_evidence`. That fallback is
+reserved for conflicts the precedence rule *can't* resolve (e.g. two
+technical systems disagreeing with each other — covered by
+`agent/supervisor.py`'s own unit tests, `test_unresolvable_conflict_between_two_technical_readings`,
+but not currently a separate golden-dataset archetype). The golden
+dataset's 3 `conflicting_evidence` scenarios now expect a *resolved*,
+medium-confidence diagnosis favoring the technical (Network) specialist's
+finding, matching `agent/supervisor.py`'s actual, already-unit-tested
+behavior (`test_conflict_resolved_by_technical_precedence`,
+`05-DEVELOPMENT-LOG.md`'s Phase 4 entry) — not the stale planning-time
+example.
+
 ### Scenario schema
 
 ```python

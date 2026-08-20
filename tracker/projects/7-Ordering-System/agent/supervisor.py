@@ -43,6 +43,16 @@ def _evidence_to_text(finding: SpecialistFinding | None) -> str:
 
 class SpecialistReading(BaseModel):
     has_real_problem: bool
+    # Separate from has_real_problem -- added after a real eval finding
+    # (05-DEVELOPMENT-LOG.md's Phase 6 entry): a specialist can be certain
+    # *something* is wrong (e.g. provisioning failed with an error code)
+    # while genuinely not knowing *why* (the error code is absent from the
+    # knowledge base). Collapsing those into one boolean let the agent
+    # confidently name a fabricated cause -- e.g. reusing ERR_4471's
+    # explanation for the unrelated, unknown ERR_9999, because
+    # search_knowledge_base always returns its *closest* match, never
+    # "no match found" (vector search has no relevance floor by default).
+    cause_understood: bool
     stage: Literal["crm", "billing", "provisioning", "inventory"] | None
     system_type: Literal["technical", "administrative"] | None
     summary: str
@@ -75,6 +85,13 @@ def build_classification_prompt(
         "problem (e.g. an active billing hold, a provisioning failure, no "
         "circuit assigned)? A tool call that failed/was 'unavailable' is "
         "inconclusive, not itself a confirmed problem.\n"
+        "- cause_understood: is there a specific, evidence-backed "
+        "explanation for that problem? A search_knowledge_base result "
+        "with exact_match_found=false means the knowledge base has NO "
+        "real explanation for that code/fact -- it only returned its "
+        "closest, unrelated match, which does NOT count as "
+        "cause_understood=true. Set it false and let summary say the "
+        "cause is unknown.\n"
         "- stage: which pipeline stage the problem belongs to -- crm, "
         "billing, provisioning, or inventory (null if no real problem).\n"
         "- system_type: 'technical' for provisioning/inventory evidence, "
@@ -89,6 +106,21 @@ def build_classification_prompt(
         "says a circuit is assigned, the other says it isn't). Two "
         "specialists finding two *different, both-true* problems is NOT a "
         "conflict -- only set conflicting=True for an actual disagreement."
+    )
+
+
+def _unexplained_problem_diagnosis(evidence_summaries: list[str]) -> DiagnosisOutput:
+    # Shared by every branch below: a confirmed problem whose cause isn't
+    # actually understood must never be reported as a confident root
+    # cause (05-DEVELOPMENT-LOG.md's Phase 6 finding -- naming a
+    # fabricated cause here is exactly the FR6 failure mode the eval
+    # harness exists to catch).
+    return DiagnosisOutput(
+        root_cause="a real problem was found but its specific cause could not be confidently determined",
+        confidence="low",
+        evidence=evidence_summaries,
+        recommended_action="escalate for manual investigation of the unexplained failure",
+        insufficient_evidence=True,
     )
 
 
@@ -108,6 +140,8 @@ def apply_precedence_and_pipeline_rules(analysis: SynthesisAnalysis) -> Diagnosi
             # Precedence rule: technical (Provisioning/Inventory) beats
             # administrative (CRM/Billing) when they conflict.
             winner = technical[0]
+            if not winner.cause_understood:
+                return _unexplained_problem_diagnosis([r.summary for r in readings.values()])
             return DiagnosisOutput(
                 root_cause=winner.summary,
                 confidence="medium",  # a resolved conflict, not a clean single finding
@@ -133,6 +167,8 @@ def apply_precedence_and_pipeline_rules(analysis: SynthesisAnalysis) -> Diagnosi
         # earliest in CRM -> Billing -> Provisioning -> Inventory. Every
         # genuinely-true finding still appears in `evidence`.
         earliest = min(true_problems, key=lambda r: PIPELINE_ORDER.index(r.stage))
+        if not earliest.cause_understood:
+            return _unexplained_problem_diagnosis([r.summary for r in true_problems])
         return DiagnosisOutput(
             root_cause=earliest.summary,
             confidence="high",
@@ -143,6 +179,8 @@ def apply_precedence_and_pipeline_rules(analysis: SynthesisAnalysis) -> Diagnosi
 
     if len(true_problems) == 1:
         only = true_problems[0]
+        if not only.cause_understood:
+            return _unexplained_problem_diagnosis([only.summary])
         return DiagnosisOutput(
             root_cause=only.summary,
             confidence="high",
@@ -189,6 +227,31 @@ def make_dispatch_specialists(billing_graph=None, network_graph_=None):
     return dispatch_specialists
 
 
+def _kb_search_found_no_match(finding: SpecialistFinding | None) -> bool:
+    # Deterministic override, not just prompt guidance: the classifier LLM
+    # doesn't *always* honor exact_match_found=False on its own, even
+    # though it's an explicit instruction (05-DEVELOPMENT-LOG.md's Phase 6
+    # finding -- gpt-4o-mini followed it in most, not all, cases). Since
+    # exact_match_found is already a deterministic signal computed in
+    # agent/tools.py, cross-checking it here in code closes the gap
+    # completely instead of just reducing it.
+    if finding is None:
+        return False
+    return any(
+        e.tool_name == "search_knowledge_base" and e.success
+        and isinstance(e.data, dict) and e.data.get("exact_match_found") is False
+        for e in finding.evidence
+    )
+
+
+def _enforce_kb_grounding(analysis: SynthesisAnalysis, state: SupervisorState) -> SynthesisAnalysis:
+    if _kb_search_found_no_match(state["billing_finding"]):
+        analysis.billing_reading.cause_understood = False
+    if _kb_search_found_no_match(state["network_finding"]):
+        analysis.network_reading.cause_understood = False
+    return analysis
+
+
 def make_synthesize_diagnosis(llm: BaseChatModel | None = None):
     llm = llm or ChatOpenAI(model="gpt-4o-mini", temperature=0)
     structured_llm = llm.with_structured_output(SynthesisAnalysis)
@@ -200,6 +263,7 @@ def make_synthesize_diagnosis(llm: BaseChatModel | None = None):
         )
         try:
             analysis = await structured_llm.ainvoke(prompt)
+            analysis = _enforce_kb_grounding(analysis, state)
             diagnosis = apply_precedence_and_pipeline_rules(analysis)
         except Exception as e:
             # agent/state.py's confidence_matches_evidence_state validator

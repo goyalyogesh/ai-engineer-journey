@@ -110,6 +110,10 @@ async def test_diagnose_real_end_to_end_produces_correlation_linked_log(
     body = response.json()
     assert body["insufficient_evidence"] is False
 
+    # Exposed so Phase 6's eval harness can pull this request's own log
+    # lines back out (evidence-citation / tool-call-efficiency metrics).
+    correlation_id_header = response.headers["X-Correlation-Id"]
+
     lines = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert lines, "expected at least one structured log line for this request"
 
@@ -118,6 +122,7 @@ async def test_diagnose_real_end_to_end_produces_correlation_linked_log(
     # that's what makes it possible to grep one request's full trace.
     assert len(correlation_ids) == 1
     assert None not in correlation_ids
+    assert correlation_ids == {correlation_id_header}
 
     events = {line["event"] for line in lines}
     assert "tool_call" in events
