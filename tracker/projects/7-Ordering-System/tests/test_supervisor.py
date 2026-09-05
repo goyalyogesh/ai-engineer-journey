@@ -522,17 +522,28 @@ async def test_get_supervisor_graph_checkpoints_for_real(tmp_path, monkeypatch):
     supervisor_module._compiled_supervisor_graph = None
     supervisor_module._checkpointer_cm = None
 
-    graph = await supervisor_module.get_supervisor_graph()
-    config = {"configurable": {"thread_id": "test-thread"}}
-    result = await graph.ainvoke(initial_supervisor_state("ORD-88213"), config=config)
-    assert result["diagnosis"] is not None
-    assert os.path.exists(db_path)
+    try:
+        graph = await supervisor_module.get_supervisor_graph()
+        config = {"configurable": {"thread_id": "test-thread"}}
+        result = await graph.ainvoke(initial_supervisor_state("ORD-88213"), config=config)
+        assert result["diagnosis"] is not None
+        assert os.path.exists(db_path)
 
-    state_snapshot = await graph.aget_state(config)
-    assert state_snapshot.values["order_id"] == "ORD-88213"
+        state_snapshot = await graph.aget_state(config)
+        assert state_snapshot.values["order_id"] == "ORD-88213"
 
-    # Second call must reuse the cached graph/checkpointer, not rebuild
-    # them (module-level singleton -- see the comment above
-    # get_supervisor_graph in agent/supervisor.py).
-    same_graph = await supervisor_module.get_supervisor_graph()
-    assert same_graph is graph
+        # Second call must reuse the cached graph/checkpointer, not rebuild
+        # them (module-level singleton -- see the comment above
+        # get_supervisor_graph in agent/supervisor.py).
+        same_graph = await supervisor_module.get_supervisor_graph()
+        assert same_graph is graph
+    finally:
+        # This test forces the module-level graph/checkpointer cache to
+        # point at a tmp_path-scoped SQLite file -- must not leave that
+        # cached afterward, or a later test/code in the same pytest
+        # process calling get_supervisor_graph() again would get this
+        # tmp_path-scoped checkpointer back once the temp directory is
+        # cleaned up. close_supervisor_graph() is the same reset
+        # agent/supervisor.py added for api/main.py's own lifespan
+        # shutdown, for the identical reason (Phase 9's dev log entry).
+        await supervisor_module.close_supervisor_graph()

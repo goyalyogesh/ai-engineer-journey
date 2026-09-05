@@ -20,7 +20,7 @@ if you haven't.**
 ## Current status — read before doing anything else
 
 **Planning is complete. Core is complete (Phases 0-7). Extended is in
-progress — Phase 8 (Neo4j) is done (Phase 9 of 13 total not yet started).**
+progress — Phase 9 (Kafka) is done (Phase 10 of 13 total not yet started).**
 Requirements, architecture, evaluation, and a 13-phase build plan are fully
 drafted and have been through 4 review passes (see "Review history"
 below). Every Core phase is done and verified: scaffolding, mock backend
@@ -29,20 +29,27 @@ supervisor agent, the FastAPI serving layer, a real 21-scenario evaluation
 harness, and a Streamlit demo UI with a live step-by-step agent trace.
 Phase 8 added a real (locally-Dockerized, not Aura — see below) Neo4j
 knowledge graph, merged into `search_knowledge_base` alongside the
-existing Chroma vector search. `POST /diagnose` with a valid `X-API-Key`
-runs the full multi-agent loop end-to-end and returns a correct structured
-diagnosis, verified against real running processes with `curl`, a real
-browser, and a real 21-scenario eval harness run multiple times — not just
-`TestClient`. See [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for
-exactly what exists and what was verified, phase by phase. Docker itself
-has been verified for real (`docker compose config`/`build`/`up` for all 5
-containers together, including a full down/up data-persistence check for
-Neo4j's named volume).
+existing Chroma vector search. Phase 9 added a real (Docker, KRaft mode)
+Kafka broker and an async consumer trigger path (`events/consumer.py`)
+that invokes the **same** compiled supervisor graph as the sync
+`POST /diagnose` path — no agent logic duplicated between the two
+triggers. `POST /diagnose` with a valid `X-API-Key` runs the full
+multi-agent loop end-to-end and returns a correct structured diagnosis,
+verified against real running processes with `curl`, a real browser, and
+a real 21-scenario eval harness run multiple times — not just
+`TestClient`; the Kafka path has its own real end-to-end verification
+(a genuine broker message triggering a genuine diagnosis, not just
+`TestClient`-equivalent fakes). See
+[`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for exactly what exists
+and what was verified, phase by phase. Docker itself has been verified
+for real (`docker compose config`/`build`/`up` for all 6 containers
+together, including a full down/up data-persistence check for Neo4j's
+named volume).
 
 **Extended work continues phase by phase, same discipline as Core.** Per
-`04-BUILD-PLAN.md`'s sequencing principle, Phase 9 (Kafka) onward does not
-start until the human running this session explicitly says to continue —
-Phase 8 being "done" is not itself permission to keep going.
+`04-BUILD-PLAN.md`'s sequencing principle, Phase 10 (observability) onward
+does not start until the human running this session explicitly says to
+continue — Phase 9 being "done" is not itself permission to keep going.
 
 **If you are an implementing agent: do not jump ahead of the current phase
 recorded in `05-DEVELOPMENT-LOG.md` without the human running this session
@@ -125,15 +132,26 @@ These aren't preferences — violating them undoes the point of the project:
   alone (same reasoning as Phase 6's `exact_match_found` fix).
 - **Stack:** FastAPI (serving), LangGraph (orchestration), Pydantic
   (structured I/O everywhere), SQLite-per-service at Core (Postgres/RDS
-  named for Extended), Neo4j (Phase 8, built), Bedrock-hosted Claude + API
-  Gateway ingress + Kafka still named-not-built, in-app auth/rate-limit at
-  Core (Section 14), pytest (testing strategy, Section 13).
+  named for Extended), Neo4j (Phase 8, built), Kafka (Phase 9, built),
+  Bedrock-hosted Claude + API Gateway ingress still named-not-built,
+  in-app auth/rate-limit at Core (Section 14), pytest (testing strategy,
+  Section 13).
 - **API layer (`api/main.py`, Phase 5):** `POST /diagnose`, header-based
   `X-API-Key` auth, `slowapi` rate limiting keyed by API key (not IP),
   `correlation_id` = the LangGraph checkpointer's `thread_id`, structured
   JSON-lines logging (`agent/observability.py`) via a `contextvars`-based
   correlation ID rather than threading it through every function
-  signature. FastAPI `lifespan` owns the checkpointer's open/close.
+  signature. FastAPI `lifespan` owns the checkpointer's open/close via
+  `agent/supervisor.py`'s `get_supervisor_graph()`/`close_supervisor_graph()`.
+- **Event-driven trigger (`events/`, Phase 9):** local Kafka (Docker,
+  KRaft mode — broker + controller combined, no separate Zookeeper),
+  6 topics (`events/topics.py`). Mock services publish their
+  seed-derived events at FastAPI startup (they're read-only, so seeding
+  is treated as "when these records come into existence"). `events/consumer.py`
+  subscribes to `order.provisioning_failed`/`order.billing_hold_applied`,
+  calls the same `get_supervisor_graph()` singleton the sync API path
+  uses, and publishes the result to `diagnosis.events` — "one agent core,
+  two trigger paths," not two agent implementations.
 
 ## Review history — what's already been checked, so you don't re-flag it
 
@@ -191,8 +209,30 @@ returned `insufficient_evidence=True`, even for a confirmed-clean order
 with complete evidence — should have been a confident "no issue found").
 Root cause accuracy dropped from 72% to 44% before both were found and
 fixed; recovered to 72% afterward, with false-confidence rate additionally
-improved from 20% to 0%. Full reasoning for all of these is in
-`05-DEVELOPMENT-LOG.md`'s Phase 3-8 entries.
+improved from 20% to 0%. Phase 9 found and fixed 5 real concurrency/
+lifecycle bugs purely through running the real Kafka stack, not review: a
+producer thread-safety deadlock (a shared `AIOKafkaProducer` singleton
+can't be started from multiple threads' event loops at once — mock
+services run as threads in the test suite), an unclosed-producer leak on
+failed `.start()`, consumer-group backlog churn from a hardcoded
+`group_id`, an offset-reset assignment race (`auto_offset_reset` only
+applies once Kafka's group coordinator has actually assigned partitions),
+and a stale checkpointer cache after FastAPI shutdown (fixed by adding
+`agent/supervisor.py`'s `close_supervisor_graph()`, which resets the
+module-level cache, not just closing the connection). The explicit
+Phase 0-9 review that followed found 4 more Phase 9 issues, all in
+Docker networking, none in agent logic (the earlier verification ran
+mock services via local `uvicorn`, never via their actual Docker images
+together): each mock service's build context was scoped to its own
+subdirectory and couldn't see the new `events/` package (fixed by
+widening the build context to the repo root), `aiokafka` was missing from
+3 mock services' own `requirements.txt`, Kafka's advertised listener was
+only reachable from the host and not from other containers (fixed with
+the standard dual-listener pattern), and a cold `docker compose up`
+started the mock services racing Kafka's own startup time (fixed with a
+healthcheck + `depends_on: condition: service_healthy`). Full reasoning
+for all of these is in `05-DEVELOPMENT-LOG.md`'s Phase 3-9 entries and
+the Phase 0-9 review section.
 
 **If you're reviewing this project:** the scope boundaries (mocked systems,
 no write access, Core/Extended/Optional tiers) are deliberate, reasoned

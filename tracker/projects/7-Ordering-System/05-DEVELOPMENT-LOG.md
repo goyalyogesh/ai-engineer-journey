@@ -496,6 +496,103 @@ local `uvicorn` and via Docker.
 
 ---
 
+## Phase 5 — FastAPI serving layer
+
+**Status:** ✅ Done.
+
+**What was built:**
+- `agent/observability.py` — **new file, not in the original repo tree.**
+  Core-tier structured JSON-lines logging (`02-ARCHITECTURE.md` Section
+  12): a `contextvars.ContextVar` carries the current request's
+  `correlation_id` without threading it through every Phase 2-4 function
+  signature, `log_event()` appends one JSON line per call, and
+  `log_node_transitions()` is a decorator applied to each specialist/
+  supervisor node.
+- `agent/tools.py` — `call_with_retry` now logs one `tool_call` event per
+  attempt (success or handled failure).
+- `agent/specialists/_shared.py`, `agent/supervisor.py` — every node
+  factory's returned function now wrapped with `@log_node_transitions`.
+- `api/main.py` — `POST /diagnose`: `verify_api_key` (401 on missing/wrong
+  `X-API-Key`), `slowapi`-based rate limiting (10/min, keyed by API key,
+  not IP), a `get_graph_dependency` FastAPI dependency wrapping Phase 4's
+  `get_supervisor_graph()`, and a `lifespan` that now properly owns the
+  checkpointer's open/close lifecycle (the ownership Phase 4 explicitly
+  deferred here).
+- `tests/test_api.py` — 5 tests: missing-key 401, wrong-key 401, valid-key
+  200 (both using a `FakeGraph` via `app.dependency_overrides` — the API
+  layer's own contract, independent of the real agent logic), rate-limit
+  429 (looping requests until one trips, not a fragile exact-count
+  assumption), and one real end-to-end test with no stub at all,
+  asserting the log file's lines all share one `correlation_id` and
+  include both `tool_call` and `node_start`/`node_end` events.
+
+**Decisions made during implementation (not anticipated at planning time):**
+- **Rate limiting keyed by API key, not IP** — `slowapi`'s default
+  `key_func` (`get_remote_address`) doesn't match this section's own
+  "10 req/min **per API key**" wording; used a custom `key_func` reading
+  the `X-API-Key` header instead.
+- **`get_graph_dependency` as a real FastAPI dependency**, not a bare call
+  inside the route handler — makes the DoD's "independent of whether the
+  agent logic underneath it is real or stubbed" claim literally true via
+  `app.dependency_overrides`, rather than requiring monkeypatching.
+- **`correlation_id` doubles as the checkpointer's `thread_id`** — one ID
+  per request links its log trace to its persisted graph state.
+- **`lifespan` now opens the checkpointer at startup and closes it at
+  shutdown** — closing the loop Phase 4 explicitly left open ("proper
+  lifecycle ownership belongs to Phase 5's FastAPI lifespan").
+- **Rate-limit test loops until a 429 shows up** (up to 15 requests),
+  rather than asserting the exact 11th request fails — avoids a fragile
+  hard-coded count assumption while still proving the limit is enforced,
+  and used `Limiter.reset()` in an autouse fixture so tests don't bleed
+  rate-limit budget into each other.
+
+**A false alarm, corrected:** while preparing to curl-test the real
+server, the project's local `.env` (git-ignored, never committed) was
+found to contain a `GOOGLE_API_KEY` line and a real `ANTHROPIC_API_KEY`
+value that hadn't been explicitly added by any command run in this
+session — flagged directly rather than silently overwritten, and
+temporarily stripped back down to only the explicitly-authorized
+`OPENAI_API_KEY` value out of caution. The user confirmed they'd added
+those two keys themselves, so both were restored. `.env` now has all
+three real keys (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`)
+plus a locally-generated `API_KEY` value for the curl verification below.
+`GOOGLE_API_KEY` still isn't read by any code in this project (harmless
+either way) — noted here only because flagging-then-restoring is worth a
+one-line record, not because anything was actually wrong.
+
+**Verification actually performed:**
+- `pytest tests/test_api.py -v` — **5/5 passed**, including the real
+  end-to-end test.
+- **Real, running-process curl verification** (not just `TestClient`) —
+  started all 4 mock services via real `uvicorn` processes plus the real
+  FastAPI app (`uvicorn api.main:app`), then:
+  - No `X-API-Key` header → `401 {"detail":"invalid or missing API key"}`
+  - Wrong key → same `401`
+  - Correct key → `200`, with the exact expected diagnosis:
+    `root_cause: "Provisioning failed due to no circuit assigned for the
+    service address (ERR_4471)."`, `confidence: "high"`,
+    `insufficient_evidence: false` — matching the worked example.
+  - Inspected the resulting `agent_events.jsonl` directly: **47 log
+    lines, all sharing one `correlation_id`**, tracing the full request
+    from `supervisor.dispatch_specialists` through both specialists'
+    complete `plan → execute → evaluate` loops (including their tool
+    calls) through `supervisor.synthesize_diagnosis` — a genuine,
+    grep-able, correlation-ID-linked trace of one real request, exactly
+    what the Definition of Done asks for.
+- Full suite together: `pytest -v --cov=agent --cov=api --cov-report=term-missing`
+  — **49/49 passed.** `agent/observability.py` and `api/main.py` both
+  **100%** coverage. `agent/tools.py` remains at 99% (same 1 known,
+  already-explained Chroma re-seed line from Phase 2). Overall: **99%.**
+- Confirmed `pip install -e ".[dev]"` still resolves cleanly with
+  `slowapi` added to `pyproject.toml`, and confirmed `agent_events.jsonl`/
+  `agent_checkpoints.db` (both regenerated by the real tests/curl run)
+  stay correctly git-ignored (`*.jsonl` pattern added to `.gitignore`
+  alongside the existing `*.db` pattern).
+
+**Next:** Phase 6 — evaluation harness.
+
+---
+
 ## Phase 6 — Evaluation harness
 
 **Status:** ✅ Done. This phase found and fixed 3 real bugs via the eval
@@ -922,97 +1019,284 @@ and logged above.
 
 ---
 
-## Phase 5 — FastAPI serving layer
+## Phase 9 — Kafka event-driven trigger [EXTENDED]
 
 **Status:** ✅ Done.
 
 **What was built:**
-- `agent/observability.py` — **new file, not in the original repo tree.**
-  Core-tier structured JSON-lines logging (`02-ARCHITECTURE.md` Section
-  12): a `contextvars.ContextVar` carries the current request's
-  `correlation_id` without threading it through every Phase 2-4 function
-  signature, `log_event()` appends one JSON line per call, and
-  `log_node_transitions()` is a decorator applied to each specialist/
-  supervisor node.
-- `agent/tools.py` — `call_with_retry` now logs one `tool_call` event per
-  attempt (success or handled failure).
-- `agent/specialists/_shared.py`, `agent/supervisor.py` — every node
-  factory's returned function now wrapped with `@log_node_transitions`.
-- `api/main.py` — `POST /diagnose`: `verify_api_key` (401 on missing/wrong
-  `X-API-Key`), `slowapi`-based rate limiting (10/min, keyed by API key,
-  not IP), a `get_graph_dependency` FastAPI dependency wrapping Phase 4's
-  `get_supervisor_graph()`, and a `lifespan` that now properly owns the
-  checkpointer's open/close lifecycle (the ownership Phase 4 explicitly
-  deferred here).
-- `tests/test_api.py` — 5 tests: missing-key 401, wrong-key 401, valid-key
-  200 (both using a `FakeGraph` via `app.dependency_overrides` — the API
-  layer's own contract, independent of the real agent logic), rate-limit
-  429 (looping requests until one trips, not a fragile exact-count
-  assumption), and one real end-to-end test with no stub at all,
-  asserting the log file's lines all share one `correlation_id` and
-  include both `tool_call` and `node_start`/`node_end` events.
+- `docker-compose.yml` — a `kafka` service (`apache/kafka:3.9.0`), KRaft
+  mode (broker + controller combined, no separate Zookeeper — the build
+  plan's own wording), single node, `PLAINTEXT://localhost:9092`.
+- `events/topics.py` — creates the 6 topics this system publishes/
+  consumes (`order.created`, `order.payment_authorized`,
+  `order.provisioning_failed`, `order.provisioning_succeeded`,
+  `order.billing_hold_applied`, `diagnosis.events`) via
+  `AIOKafkaAdminClient`, idempotent (catches `TopicAlreadyExistsError`),
+  same "run once against the live broker" shape as `graph/populate.py`.
+  Run with `python -m events.topics`.
+- `events/producer.py` — `publish_event(topic, payload)` (persistent
+  module-level singleton producer, used by the consumer's own
+  diagnosis-result publish) and `publish_events_best_effort(events)`
+  (short-lived, per-call producer — used by the mock services' startup
+  seeding; see the thread-safety bug below for why these two are *not*
+  the same code path). A missing/unreachable broker degrades silently —
+  mock services must keep serving their Kafka-independent read endpoints
+  even if Kafka is down.
+- `events/consumer.py` — `handle_event(event, graph=None, publish=publish_event)`
+  parses a triggering event's `order_id`, invokes the (shared) compiled
+  supervisor graph via `get_supervisor_graph()`, and publishes the result
+  to `diagnosis.events` with a fresh `correlation_id` per call.
+  `build_consumer(group_id, auto_offset_reset)` / `consume_forever(consumer)`
+  are split apart (see the offset-reset race below) and composed by
+  `run_consumer(group_id=..., auto_offset_reset=...)`, which is what
+  `python -m events.consumer` runs in production against
+  `TRIGGER_TOPICS = ["order.provisioning_failed", "order.billing_hold_applied"]`.
+  **Core's "one agent, two trigger paths" design from Phase 4/5 pays off
+  here exactly as intended** — the Kafka consumer and the FastAPI
+  `POST /diagnose` route both call the identical `get_supervisor_graph()`
+  singleton; no agent logic was duplicated or forked for the event-driven
+  path.
+- `mock_services/crm/main.py`, `mock_services/billing/main.py`,
+  `mock_services/provisioning/main.py` — each now publishes its
+  seed-derived events during FastAPI `lifespan` startup (`_publish_seed_events()`),
+  treating seeding as "the point these records come into existence" for a
+  mock system, rather than adding artificial write endpoints that would
+  violate the project's established read-only mock-service scope.
+  `mock_services/inventory` was left untouched — no inventory-specific
+  topic exists in the build plan's topic list.
+- `agent/supervisor.py` — new `close_supervisor_graph()`, closing the
+  checkpointer connection and resetting the module-level cache
+  (`_compiled_supervisor_graph`, `_checkpointer_cm`) back to `None`. Used
+  by both `api/main.py`'s lifespan shutdown and by
+  `tests/test_supervisor.py`'s own cleanup (see the stale-cache bug
+  below).
+- `tests/test_consumer.py` — 4 tests: 3 isolated `handle_event()` tests
+  (constructed fake event + `FakeGraph` + fake `publish` — no real
+  broker), plus 1 composition test for `run_consumer()` monkeypatching
+  `build_consumer`/`consume_forever`.
+- `tests/test_producer.py` — 2 tests: empty-list no-op, and graceful
+  degradation when Kafka is unreachable.
+- `tests/test_events_integration.py` — the real end-to-end integration
+  test the build plan calls for: a real broker, a fresh
+  `uuid.uuid4()`-named consumer group, publishes a real
+  `order.provisioning_failed` event for `ORD-88213`, and asserts the
+  correct diagnosis arrives on `diagnosis.events`.
 
 **Decisions made during implementation (not anticipated at planning time):**
-- **Rate limiting keyed by API key, not IP** — `slowapi`'s default
-  `key_func` (`get_remote_address`) doesn't match this section's own
-  "10 req/min **per API key**" wording; used a custom `key_func` reading
-  the `X-API-Key` header instead.
-- **`get_graph_dependency` as a real FastAPI dependency**, not a bare call
-  inside the route handler — makes the DoD's "independent of whether the
-  agent logic underneath it is real or stubbed" claim literally true via
-  `app.dependency_overrides`, rather than requiring monkeypatching.
-- **`correlation_id` doubles as the checkpointer's `thread_id`** — one ID
-  per request links its log trace to its persisted graph state.
-- **`lifespan` now opens the checkpointer at startup and closes it at
-  shutdown** — closing the loop Phase 4 explicitly left open ("proper
-  lifecycle ownership belongs to Phase 5's FastAPI lifespan").
-- **Rate-limit test loops until a 429 shows up** (up to 15 requests),
-  rather than asserting the exact 11th request fails — avoids a fragile
-  hard-coded count assumption while still proving the limit is enforced,
-  and used `Limiter.reset()` in an autouse fixture so tests don't bleed
-  rate-limit budget into each other.
+- **Mock services publish events at seed time, not via new write
+  endpoints** — the cleanest way to give a read-only mock system a
+  plausible "event source" without inventing state-mutating endpoints
+  that don't exist in the real build plan.
+- **Billing's event publisher cross-references CRM's own seed data** to
+  resolve `customer_id → order_id` (Billing's own records only key on
+  `customer_id`) — documented as a deliberate, honest mock-system
+  simplification specific to this project's 1:1 seed mapping, not a
+  claim about how a real Billing system would necessarily behave.
+- **Two different producer lifetimes in `events/producer.py`** — a
+  persistent singleton for the consumer's own result-publishing, but a
+  short-lived, per-call producer for the mock services' best-effort seed
+  publishing. Forced by a real concurrency bug (below), not a stylistic
+  choice.
+- **`run_consumer()` takes `group_id`/`auto_offset_reset` as parameters**
+  instead of hardcoding them — required to let tests use a disposable
+  group_id, but also the only way a production and a test consumer share
+  the same code path.
 
-**A false alarm, corrected:** while preparing to curl-test the real
-server, the project's local `.env` (git-ignored, never committed) was
-found to contain a `GOOGLE_API_KEY` line and a real `ANTHROPIC_API_KEY`
-value that hadn't been explicitly added by any command run in this
-session — flagged directly rather than silently overwritten, and
-temporarily stripped back down to only the explicitly-authorized
-`OPENAI_API_KEY` value out of caution. The user confirmed they'd added
-those two keys themselves, so both were restored. `.env` now has all
-three real keys (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`)
-plus a locally-generated `API_KEY` value for the curl verification below.
-`GOOGLE_API_KEY` still isn't read by any code in this project (harmless
-either way) — noted here only because flagging-then-restoring is worth a
-one-line record, not because anything was actually wrong.
+**Bugs found and fixed, in the order discovered (all found the same way
+as every previous phase — running the real thing, not just imagining
+it):**
+
+1. **Producer thread-safety deadlock.** Original `events/producer.py`
+   used one shared module-level `AIOKafkaProducer` for *both*
+   `publish_event()` and the mock services' seed publishing. The full
+   test suite runs the 4 mock services as separate **threads**
+   (`tests/conftest.py`'s `real_mock_services` fixture), each with its
+   own asyncio event loop — an `aiokafka` producer is bound to whichever
+   loop was running when `.start()` was awaited, so multiple threads
+   racing to start the *same* shared producer object deadlocked the
+   entire suite indefinitely. Diagnosed via `ps aux` (process alive, near
+   -zero CPU — blocked, not computing) and `lsof -p <pid>` (no
+   established connection to Kafka's port despite other services being
+   up). **Fixed** by giving `publish_events_best_effort()` its own
+   short-lived producer, created and closed within the same call, never
+   touching the shared singleton. Verified: the previously-hung
+   `tests/test_mock_services.py` completed in 0.29-0.46s afterward, both
+   with Kafka up and with it stopped.
+2. **Unclosed-producer resource leak.** `_get_producer()` assigned the
+   module-level `_producer` global *before* awaiting `.start()`, so a
+   failed start (Kafka unreachable) permanently cached a
+   constructed-but-never-started producer, both leaking a warning at
+   process exit and blocking any future retry. **Fixed** by only
+   promoting the local `producer` variable to the module global *after*
+   `.start()` succeeds.
+3. **Consumer-group backlog churn.** `run_consumer()` originally
+   hardcoded `group_id="order-diagnosis-consumer"` and
+   `auto_offset_reset="earliest"`. Testing the real end-to-end flow with
+   a fixed group_id meant replaying the *entire* historical backlog of
+   `order.provisioning_failed`/`order.billing_hold_applied` messages
+   accumulated from every mock-service restart across the day's testing
+   — each backlog message triggering a real ~10-15s diagnosis — before
+   ever reaching a freshly-published test message. First surfaced as the
+   watcher receiving `ORD-90002`'s diagnosis instead of the expected
+   `ORD-88213`. **Fixed** by parameterizing `group_id`/`auto_offset_reset`
+   so the integration test can use a disposable group.
+4. **Offset-reset assignment race.** Even with a fresh group_id and
+   `auto_offset_reset="latest"`, a fixed `asyncio.sleep(2)` before
+   publishing intermittently missed the message (a 60s timeout waiting
+   for a message that should have arrived) — `auto_offset_reset` only
+   takes effect once Kafka's group coordinator has actually assigned the
+   consumer its partitions, which isn't guaranteed just because `.start()`
+   returned or an arbitrary sleep elapsed. **Fixed** by splitting
+   `run_consumer()` into `build_consumer()` + `consume_forever()`, letting
+   the test poll `consumer.assignment()` until non-empty before publishing
+   anything. Confirmed: the test then passed reliably in isolation
+   (19.54s).
+5. **Stale checkpointer cache after FastAPI shutdown.** After fixing bugs
+   3-4, a full-suite run failed deep in `aiosqlite` with
+   `ValueError: no active connection`, surfaced through LangGraph's
+   `AsyncSqliteSaver.aget_tuple()`. Root cause (confirmed by checking
+   pytest's alphabetical file execution order, which runs
+   `test_events_integration.py` *before* `test_supervisor.py`, ruling that
+   test out): `api/main.py`'s lifespan shutdown closed the checkpointer
+   connection but never reset `agent/supervisor.py`'s module-level cache
+   back to `None`. Since `tests/test_api.py`'s `client` fixture is
+   module-scoped (triggering one real lifespan startup+shutdown per test
+   file) and the whole suite shares one process, the next file to call
+   `get_supervisor_graph()` got back a graph pointing at a permanently
+   closed connection. **Fixed** by adding `close_supervisor_graph()` to
+   `agent/supervisor.py` (closes the checkpointer *and* resets the
+   cache), used by both `api/main.py`'s lifespan and
+   `tests/test_supervisor.py`'s own cleanup. Verified: the full suite went
+   from failing to **91/91 passed in 50.99s**.
 
 **Verification actually performed:**
-- `pytest tests/test_api.py -v` — **5/5 passed**, including the real
-  end-to-end test.
-- **Real, running-process curl verification** (not just `TestClient`) —
-  started all 4 mock services via real `uvicorn` processes plus the real
-  FastAPI app (`uvicorn api.main:app`), then:
-  - No `X-API-Key` header → `401 {"detail":"invalid or missing API key"}`
-  - Wrong key → same `401`
-  - Correct key → `200`, with the exact expected diagnosis:
-    `root_cause: "Provisioning failed due to no circuit assigned for the
-    service address (ERR_4471)."`, `confidence: "high"`,
-    `insufficient_evidence: false` — matching the worked example.
-  - Inspected the resulting `agent_events.jsonl` directly: **47 log
-    lines, all sharing one `correlation_id`**, tracing the full request
-    from `supervisor.dispatch_specialists` through both specialists'
-    complete `plan → execute → evaluate` loops (including their tool
-    calls) through `supervisor.synthesize_diagnosis` — a genuine,
-    grep-able, correlation-ID-linked trace of one real request, exactly
-    what the Definition of Done asks for.
-- Full suite together: `pytest -v --cov=agent --cov=api --cov-report=term-missing`
-  — **49/49 passed.** `agent/observability.py` and `api/main.py` both
-  **100%** coverage. `agent/tools.py` remains at 99% (same 1 known,
-  already-explained Chroma re-seed line from Phase 2). Overall: **99%.**
-- Confirmed `pip install -e ".[dev]"` still resolves cleanly with
-  `slowapi` added to `pyproject.toml`, and confirmed `agent_events.jsonl`/
-  `agent_checkpoints.db` (both regenerated by the real tests/curl run)
-  stay correctly git-ignored (`*.jsonl` pattern added to `.gitignore`
-  alongside the existing `*.db` pattern).
+- `docker compose up -d kafka` — confirmed "Kafka Server started" in the
+  logs, confirmed real connectivity via a live `AIOKafkaAdminClient` call.
+- `python -m events.topics` run twice — both times printed
+  "Created/verified 6 topics.", confirming idempotency.
+- `pytest tests/test_events_integration.py -v` in isolation — passed
+  (19.54s) after fixes 3-4, confirming the real end-to-end path: a
+  genuine Kafka message triggers the real supervisor graph and produces
+  the correct diagnosis on `diagnosis.events`.
+- Full suite: `pytest -v --cov=agent --cov=api --cov=eval --cov=graph --cov=events --cov-report=term-missing`
+  — **94/94 passed in 52.10s**. `events/producer.py` **100%**,
+  `events/consumer.py` **97%** (only the `if __name__ == "__main__":`
+  guard uncovered — same accepted exception as `eval/run_eval.py` and
+  `graph/populate.py`), `events/topics.py` **0%** (verified by direct
+  execution instead, same reasoning as those two). Every `agent`/`api`
+  file remains **100%** (`agent/tools.py` still 99%, the same
+  long-standing known non-gap from Phase 2).
+- One intermediate full-suite run (after fixing bug 5 but before swapping
+  to `uuid.uuid4()` for the test's group_id) saw
+  `test_events_integration.py` time out under load from 90 preceding
+  tests' accumulated consumer-group state, taking 407s total, while the
+  same test passed cleanly in isolation — treated as broker/resource
+  contention from a whole day's ad-hoc testing, not a logic bug, and
+  `uuid.uuid4()` was swapped in regardless as a correctness improvement.
+  Two subsequent full-suite reruns both passed cleanly (91/91, then
+  94/94), with no recurrence.
 
-**Next:** Phase 6 — evaluation harness.
+**Next:** Phase 10.
+
+---
+
+## Review — Phase 0 through Phase 9, requested explicitly after Phase 9
+
+Same discipline as the Phase 0-8 review: fresh install, full container
+rebuild, full suite, `git status`. This pass found 3 more real bugs —
+all in Docker networking specifically, none in agent logic — because the
+prior Phase 9 verification ran the mock services via local `uvicorn`
+processes (pytest's own fixture), never via their actual Docker images
+together on the compose network. "Passing tests" and "the containers
+described in `docker-compose.yml` actually work together" turned out to
+be two different claims.
+
+**Verification performed:**
+- `./env/bin/pip install -e ".[dev]"` — clean, no dependency resolution
+  errors.
+- `docker compose down && docker compose up -d --build` — full rebuild
+  and recreate of all 6 containers together.
+
+**Bugs found and fixed, in the order discovered:**
+
+1. **Mock service images couldn't see the new `events/` package (or, for
+   billing, `mock_services/crm`'s seed data).** `crm`/`billing`/
+   `provisioning` all crashed at startup with `ModuleNotFoundError`.
+   Root cause: `docker-compose.yml` built each mock service from its own
+   subdirectory (`build: ./mock_services/crm`, a Phase 1 decision that
+   held fine through Phase 8) — a build context that never included the
+   top-level `events/` package Phase 9 added, or, for billing, its sibling
+   `mock_services/crm` package. **Fixed** by widening all 4 mock
+   services' build context to the repo root (`context: .`, explicit
+   `dockerfile:` path) and rewriting their Dockerfiles to `COPY
+   mock_services mock_services` + `COPY events events` from that root
+   (inventory kept its narrower, unchanged scope — it doesn't use either).
+2. **`aiokafka` wasn't installed inside the mock service images.** Fixed
+   bug 1, rebuilt, and hit a second `ModuleNotFoundError`, this time for
+   `aiokafka` itself — it had been added to the top-level `pyproject.toml`
+   (for the main app/tests) but not to `mock_services/{crm,billing,
+   provisioning}/requirements.txt`, the actual dependency list their
+   Dockerfiles install from. **Fixed** by adding `aiokafka` to all 3.
+3. **Kafka's advertised listener was only reachable from the host, not
+   from other containers.** With bugs 1-2 fixed, all 6 containers started,
+   but `crm`/`billing`/`provisioning` logged
+   `Connect call failed ('127.0.0.1', 9092)` trying to actually produce.
+   Root cause: `KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092`
+   tells every client "reach broker id 1 at localhost:9092" — correct for
+   host-side clients (pytest, `python -m events.topics`, since Kafka's
+   port is published to the host), but wrong for another container on the
+   same compose network, where "localhost" resolves to that container
+   itself, not the Kafka container. **Fixed** with Kafka's standard
+   dual-listener pattern: `PLAINTEXT_HOST` (advertised as
+   `localhost:9092`, for host clients) plus `PLAINTEXT` (advertised as
+   `kafka:29092`, for other containers), with `KAFKA_INTER_BROKER_LISTENER_NAME`
+   pinned to `PLAINTEXT`. The 3 mock services' `KAFKA_BOOTSTRAP_SERVERS`
+   override (added while fixing bug 1) was repointed from `kafka:9092` to
+   `kafka:29092` to match.
+4. **A related startup-ordering race, found immediately after fixing bug
+   3, not itself a code bug:** a cold `docker compose up -d` starts all 6
+   containers in parallel; Kafka takes several seconds to actually finish
+   starting, and the mock services publish their seed events exactly
+   once, at their own startup, degrading silently if Kafka isn't reachable
+   yet (by design — a down broker must never block their read endpoints).
+   On a cold stack, the mock services lost this race every time, silently
+   skipping every seed-event publish with no crash and no test failure to
+   catch it. **Fixed** with a Kafka `healthcheck` (`kafka-broker-api-versions.sh`)
+   and `depends_on: kafka: condition: service_healthy` on the 3 mock
+   services that publish events — confirmed fixed by a second cold
+   `docker compose down && up -d`, which this time waited for Kafka to
+   report healthy before starting them.
+
+**Also confirmed, not a bug:** Kafka's docker-compose service has no
+named volume (unlike Neo4j's `neo4j_data`), so a fresh `docker compose up`
+always starts with an empty broker — `python -m events.topics` (already
+documented in its own docstring as a one-time-per-broker-lifetime step)
+must be re-run before the mock services' seed-event publish will find
+their topics already created. Confirmed this by running it against the
+freshly recreated broker, then restarting the 3 mock services
+(`docker compose restart crm billing provisioning`) and verifying a
+clean publish with no warnings.
+
+**End-to-end confirmation, against the fully rebuilt stack:**
+- Checked message counts landed in every seed-event topic via
+  `kafka-get-offsets.sh`: `order.created` (42), `order.payment_authorized`
+  (30), `order.provisioning_failed` (24), `order.provisioning_succeeded`
+  (12), `order.billing_hold_applied` (12) — all non-zero, confirming the
+  mock services' seed-event publish genuinely reaches Kafka end-to-end
+  through the real container network, not just from a host-side test.
+- `pytest tests/test_events_integration.py -v` run again against this
+  stack — **passed (23.42s)**.
+- Full suite again: `pytest -v --cov=agent --cov=api --cov=eval --cov=graph --cov=events --cov-report=term-missing`
+  — **94/94 passed in 74.64s**, identical coverage numbers to the
+  pre-review run (`events/producer.py` 100%, `events/consumer.py` 97%,
+  `agent`/`api` files 100% except the same 2 known non-gaps).
+- `git status` — clean of any Phase-9-generated clutter (no stray `.db`/
+  `.jsonl`/`__pycache__`); the only untracked files are the new Phase 9
+  source itself (`events/`, `tests/test_consumer.py`,
+  `tests/test_events_integration.py`, `tests/test_producer.py`).
+  `.gitignore` needed no changes — Phase 9 generates nothing new outside
+  patterns already covered (`*.db`, `*.jsonl`).
+
+**Everything else checked out** — no further gaps found across the full
+Phase 0-9 review beyond the 4 Docker-networking issues above (already
+fixed and logged).

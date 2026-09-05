@@ -7,16 +7,38 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
 from .db import get_connection, init_db
-from .seed_data import seed
+from .seed_data import RECORDS, seed
 from .models import ProvisioningRecord
 
 load_dotenv()
+
+
+async def _publish_seed_events() -> None:
+    # Phase 9 (02-ARCHITECTURE.md Section 4): order.provisioning_failed /
+    # order.provisioning_succeeded -- the 2 event types that (along with
+    # billing's hold event) actually trigger automatic diagnosis
+    # (events/consumer.py). Provisioning already keys on order_id
+    # directly, no cross-service lookup needed (unlike billing's).
+    from events.producer import publish_events_best_effort
+
+    events = []
+    for order_id, status, error_code, circuit_id, updated_at in RECORDS:
+        if status == "failed":
+            events.append(("order.provisioning_failed", {
+                "order_id": order_id, "error_code": error_code,
+            }))
+        elif status == "succeeded":
+            events.append(("order.provisioning_succeeded", {
+                "order_id": order_id, "circuit_id": circuit_id,
+            }))
+    await publish_events_best_effort(events)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     seed()
+    await _publish_seed_events()
     yield
 
 

@@ -706,6 +706,55 @@ isolation-then-integration pattern as `02-ARCHITECTURE.md` Section 13:**
   graph, triggers a full diagnosis with zero API calls involved, visible
   on `diagnosis.events`.
 
+**Surfaced during actual Phase 9 implementation, added here retroactively:**
+- **Phase 1's mock services are read-only** — there's no live "create
+  order" endpoint to hang a publish call off of. Resolved by publishing
+  each service's seed-derived events during its own FastAPI `lifespan`
+  startup instead: seeding *is* "the point these records come into
+  existence" for a mock system. Billing's publisher has to cross-reference
+  CRM's own seed data to resolve `customer_id → order_id`, since Billing's
+  records only key on `customer_id` — a deliberate, honest simplification
+  of this mock system, not a claim about a real Billing service.
+- **`events/producer.py` needs two different producer lifetimes, not
+  one.** A single shared module-level `AIOKafkaProducer` deadlocked the
+  whole test suite, because `tests/conftest.py` runs the 4 mock services
+  as separate threads (each with its own asyncio event loop), and
+  `aiokafka` producers are bound to whichever loop was running at
+  `.start()`. `publish_event()` (consumer's own result-publish) keeps the
+  persistent singleton; the mock services' `publish_events_best_effort()`
+  gets its own short-lived, per-call producer instead.
+- **`events/consumer.py`'s `run_consumer()` splits into `build_consumer()`
+  + `consume_forever()`**, and takes `group_id`/`auto_offset_reset` as
+  parameters rather than the hardcoded `"order-diagnosis-consumer"` /
+  `"earliest"` this section implies. Needed so the integration test can
+  use a disposable consumer group and poll `consumer.assignment()` until
+  Kafka has actually assigned partitions before publishing — otherwise a
+  fixed-group test either replays the entire historical backlog or races
+  `auto_offset_reset`'s "latest" semantics against partition assignment.
+  Full detail in `05-DEVELOPMENT-LOG.md`'s Phase 9 entry.
+- **Kafka broker**: `apache/kafka:3.9.0`, single node, KRaft
+  `process.roles=broker,controller` (this section's "no separate
+  Zookeeper" already anticipated this; the concrete env vars are in
+  `docker-compose.yml`).
+- **Kafka needs 2 advertised listeners, not 1**, plus a healthcheck +
+  `depends_on` on the 3 mock services that publish events — found only by
+  running the actual `docker-compose.yml` stack together (not caught by
+  pytest, which runs the mock services via local `uvicorn`). One listener
+  advertised as `localhost:9092` for host-side clients (tests,
+  `python -m events.topics`), one advertised as `kafka:29092` for other
+  containers on the compose network (a container's own "localhost" isn't
+  the Kafka container). Without the healthcheck + `depends_on`, a cold
+  `docker compose up` starts the mock services racing Kafka's own startup
+  time and silently drops their one-shot seed-event publish.
+- **All 4 mock services' Docker build context widened from their own
+  subdirectory to the repo root** — Phase 1's `build: ./mock_services/crm`
+  (etc.) held fine through Phase 8, but Phase 9's `events/` package and
+  billing's cross-import of `mock_services/crm` aren't visible from a
+  build context scoped to one service's own directory. `aiokafka` also
+  had to be added to 3 mock services' own `requirements.txt` (it was only
+  in the top-level `pyproject.toml`, which their Dockerfiles don't read
+  from). Full detail in `05-DEVELOPMENT-LOG.md`'s Phase 0-9 review.
+
 ## Phase 10 — Full observability stack [EXTENDED]
 
 **Goal:** upgrade Phase 5's flat JSON logs to the real 3-part stack

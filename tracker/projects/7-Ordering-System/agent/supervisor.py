@@ -447,6 +447,28 @@ async def get_supervisor_graph():
     return _compiled_supervisor_graph
 
 
+async def close_supervisor_graph() -> None:
+    """Closes the checkpointer connection and resets the module-level
+    cache, so a later get_supervisor_graph() call rebuilds cleanly instead
+    of returning a stale, closed-connection graph.
+
+    Real bug found during Phase 9's own eval/integration testing:
+    `api/main.py`'s lifespan closed the checkpointer on shutdown but never
+    reset this module's cache, so any code calling get_supervisor_graph()
+    again afterward *in the same process* -- this project's own test
+    suite runs many files in one pytest process, and a FastAPI TestClient
+    fixture tearing down triggers exactly this shutdown -- got a broken
+    graph back (`aiosqlite`'s "no active connection") instead of a fresh
+    one, rather than a real production concern (a real process just exits
+    on shutdown; nothing calls get_supervisor_graph() again afterward).
+    """
+    global _checkpointer_cm, _compiled_supervisor_graph
+    if _checkpointer_cm is not None:
+        await _checkpointer_cm.__aexit__(None, None, None)
+    _checkpointer_cm = None
+    _compiled_supervisor_graph = None
+
+
 def initial_supervisor_state(order_id: str) -> SupervisorState:
     return {
         "order_id": order_id,

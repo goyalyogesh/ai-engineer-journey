@@ -1,6 +1,6 @@
 # Project 7: Order Diagnosis Agent
 
-**Status:** ✅ Core complete (Phases 0-7). 🚧 Extended in progress — Phase 8 of 13 done (see `05-DEVELOPMENT-LOG.md`). A real, runnable multi-agent HTTP service with a working demo UI: `POST /diagnose` (auth'd, rate-limited) and `streamlit run ui/app.py` both return a correct structured diagnosis for the worked example, with a live step-by-step agent trace. `search_knowledge_base` now merges vector search (Chroma) with a real Neo4j knowledge graph (Docker-hosted). Verified with a real 21-scenario evaluation harness, re-run multiple times as real bugs were found and fixed. Kafka/Bedrock (the rest of Extended) start only when explicitly requested next.
+**Status:** ✅ Core complete (Phases 0-7). 🚧 Extended in progress — Phase 9 of 13 done (see `05-DEVELOPMENT-LOG.md`). A real, runnable multi-agent HTTP service with a working demo UI: `POST /diagnose` (auth'd, rate-limited) and `streamlit run ui/app.py` both return a correct structured diagnosis for the worked example, with a live step-by-step agent trace. `search_knowledge_base` now merges vector search (Chroma) with a real Neo4j knowledge graph (Docker-hosted). A real Kafka broker (Docker, KRaft mode) now also triggers the same diagnosis agent asynchronously off `order.provisioning_failed`/`order.billing_hold_applied` events, publishing results to `diagnosis.events`. Verified with a real 21-scenario evaluation harness, re-run multiple times as real bugs were found and fixed. Bedrock hosting + API Gateway + the full observability stack (the rest of Extended) start only when explicitly requested next.
 
 ## One-line pitch
 
@@ -45,9 +45,10 @@ problem shape are realistic; the systems and data are not real. See
   structured diagnosis output, a FastAPI serving layer, a real evaluation
   harness, and a Streamlit demo UI. **Complete — Phases 0-7.**
 - **Extended** — Neo4j knowledge graph (**complete — Phase 8**, local Docker
-  instance, not Aura — see Status below), Kafka event-driven trigger,
-  Bedrock hosting + API Gateway ingress, full observability stack. Rest
-  builds next, once explicitly requested.
+  instance, not Aura — see Status below), Kafka event-driven trigger
+  (**complete — Phase 9**, local Docker, KRaft mode), Bedrock hosting +
+  API Gateway ingress, full observability stack. Rest builds next, once
+  explicitly requested.
 - **Optional / v2** — named honestly, not designed in depth: SageMaker
   triage classifier, guardrails/PII redaction, semantic caching, CI/CD
   eval-gating, containerization/IaC.
@@ -55,7 +56,7 @@ problem shape are realistic; the systems and data are not real. See
 ## Status
 
 Planning complete (requirements, architecture, evaluation, build plan).
-**Core is complete (Phases 0-7). Extended is in progress — Phase 8 done.**
+**Core is complete (Phases 0-7). Extended is in progress — Phase 9 done.**
 All built and verified against real running processes, not just unit tests:
 - `POST /diagnose` (`api/main.py`) is a real, running HTTP endpoint —
   API-key auth, per-key rate limiting, and a correlation-ID-linked
@@ -76,8 +77,15 @@ All built and verified against real running processes, not just unit tests:
   either as genuine grounding.
 - A Streamlit demo (`ui/app.py`) with a live, correlation-ID-linked
   step-by-step trace of the agent's reasoning, not just the final answer.
+- A real Kafka broker (`events/`, Phase 9) — Docker, KRaft mode (no
+  separate Zookeeper). `events/consumer.py` subscribes to
+  `order.provisioning_failed`/`order.billing_hold_applied`, invokes the
+  same compiled supervisor graph the sync API uses, and publishes the
+  resulting diagnosis to `diagnosis.events` — one agent core, two trigger
+  paths, verified end-to-end against the real broker (a genuine published
+  event produces a genuine diagnosis, not a stubbed check).
 
 See [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for the running
 record of what's actually been built and verified, phase by phase. Per
-`04-BUILD-PLAN.md`'s sequencing principle, Phase 9 (Kafka) onward starts
-only once explicitly requested next.
+`04-BUILD-PLAN.md`'s sequencing principle, Phase 10 (observability) onward
+starts only once explicitly requested next.

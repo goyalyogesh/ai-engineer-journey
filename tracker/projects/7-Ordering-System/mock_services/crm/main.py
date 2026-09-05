@@ -7,10 +7,29 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
 from .db import get_connection, init_db
-from .seed_data import seed
+from .seed_data import ORDERS, seed
 from .models import OrderRecord
 
 load_dotenv()
+
+
+async def _publish_seed_events() -> None:
+    # Phase 9 (02-ARCHITECTURE.md Section 4): "the mock CRM 'creating' an
+    # order also emits order.created". This service has no live
+    # create-order endpoint (Phase 1 scoped it read-only,
+    # 01-REQUIREMENTS.md Section 4) -- seeding at startup is the only
+    # point at which these records actually come into existence, so it's
+    # the natural, honest place to publish the corresponding event, not a
+    # write endpoint added just to have somewhere to put this.
+    from events.producer import publish_events_best_effort
+
+    events = [
+        ("order.created", {
+            "order_id": order_id, "customer_id": customer_id, "address": address,
+        })
+        for order_id, customer_id, service_type, address, status, created_at in ORDERS
+    ]
+    await publish_events_best_effort(events)
 
 
 @asynccontextmanager
@@ -19,6 +38,7 @@ async def lifespan(app: FastAPI):
     # -- 04-BUILD-PLAN.md Phase 1's seed table, not Phase 6's full golden set.
     init_db()
     seed()
+    await _publish_seed_events()
     yield
 
 

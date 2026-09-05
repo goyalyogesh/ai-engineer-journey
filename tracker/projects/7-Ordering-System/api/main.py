@@ -12,10 +12,9 @@ from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from agent import supervisor as supervisor_module
 from agent.observability import correlation_id_var
 from agent.state import DiagnosisOutput
-from agent.supervisor import get_supervisor_graph, initial_supervisor_state
+from agent.supervisor import close_supervisor_graph, get_supervisor_graph, initial_supervisor_state
 
 load_dotenv()
 
@@ -39,8 +38,7 @@ async def lifespan(app: FastAPI):
     # instead of leaking the connection for the life of the process.
     await get_supervisor_graph()
     yield
-    if supervisor_module._checkpointer_cm is not None:
-        await supervisor_module._checkpointer_cm.__aexit__(None, None, None)
+    await close_supervisor_graph()
 
 
 app = FastAPI(title="Order Diagnosis Agent API", lifespan=lifespan)
