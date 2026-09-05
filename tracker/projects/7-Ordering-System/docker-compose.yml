@@ -26,3 +26,26 @@ services:
       - "8004:8004"
     env_file: .env
     # CMD lives in mock_services/inventory/Dockerfile -- Phase 1
+
+  neo4j:
+    # Phase 8 [EXTENDED] -- local Neo4j, not Aura. The original plan
+    # (02-ARCHITECTURE.md Section 5) called for reusing the Neo4j Aura
+    # instance from earlier coursework, but that free-tier instance had
+    # been auto-paused-then-deleted from inactivity by the time this phase
+    # started (verified: its hostname no longer resolves at all, not a
+    # transient outage). A real, local Neo4j via Docker is still genuinely
+    # real infrastructure for testing/verification purposes -- same
+    # Core/Extended-swap honesty already applied elsewhere in this project
+    # (SQLite->Postgres, Chroma->Pinecone); Aura remains the named
+    # production-equivalent target, just not what's actually running here.
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"  # browser UI (http://localhost:7474)
+      - "7687:7687"  # bolt protocol -- what the agent actually connects to
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  neo4j_data:

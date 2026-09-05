@@ -226,6 +226,49 @@ def _get_vectorstore():
 _ERROR_CODE_PATTERN = re.compile(r"ERR_[A-Z0-9_]+", re.IGNORECASE)
 
 
+_GRAPH_QUERY = """
+MATCH (e:ErrorCode {code: $code})-[:CAUSED_BY]->(cause:Cause)-[:RESOLVED_BY]->(res:Resolution)
+OPTIONAL MATCH (e)-[:RELATED_INCIDENT]->(i:Incident)
+RETURN cause.description AS cause, res.description AS resolution, collect(i.ticket_id) AS related_incidents
+"""
+
+
+async def _search_graph(code: str) -> dict | None:
+    # Phase 8 (02-ARCHITECTURE.md Section 5.2): graph traversal for
+    # "what specific resolution path and related incidents does this
+    # error code connect to" -- a genuinely different question from
+    # vector search's "what does this generally mean," not a duplicate
+    # retrieval path. graphdb.send_query is synchronous (graph/neo4j_for_adk.py),
+    # so it's wrapped the same way agent/tools.py already wraps Chroma's
+    # synchronous similarity_search.
+    from graph.neo4j_for_adk import graphdb
+
+    result = await asyncio.to_thread(graphdb.send_query, _GRAPH_QUERY, {"code": code})
+    if result["status"] != "success" or not result["records"]:
+        # A genuinely missing graph entry (no ErrorCode node for this
+        # code) and a Neo4j connection failure both degrade to "no graph
+        # match" here, not a hard error -- the vector search result is
+        # still real and returned either way, same as an OPTIONAL MATCH
+        # finding nothing.
+        return None
+    record = result["records"][0]
+    return {
+        "cause": record["cause"],
+        "resolution": record["resolution"],
+        "related_incidents": [t for t in record["related_incidents"] if t],
+    }
+
+
+async def _search_vector(query: str, k: int = 3) -> list:
+    # Isolated on purpose -- symmetric with _search_graph above, so each
+    # retrieval method is independently testable with no dependency on the
+    # other (tests/test_kb_vector.py needs no Neo4j connection;
+    # tests/test_kb_graph.py needs no OpenAI/Chroma call), matching
+    # 02-ARCHITECTURE.md Section 13's isolation-then-integration pattern.
+    store = _get_vectorstore()
+    return await asyncio.to_thread(store.similarity_search, query, k=k)
+
+
 async def _search_kb(tool_name: str, query: str) -> ToolResult:
     start = time.monotonic()
     if not os.environ.get("OPENAI_API_KEY"):
@@ -236,14 +279,22 @@ async def _search_kb(tool_name: str, query: str) -> ToolResult:
             tool_name=tool_name, success=False, data=None,
             error="unavailable: OPENAI_API_KEY not configured", latency_ms=0,
         )
-    store = _get_vectorstore()
-    results = await asyncio.to_thread(store.similarity_search, query, k=3)
-
     query_codes = {m.upper() for m in _ERROR_CODE_PATTERN.findall(query)}
+
+    # Vector search and graph traversal run in parallel (Section 3.5's
+    # parallel-dispatch pattern, applied here to a single tool's two
+    # retrieval methods instead of two separate tool calls) -- Phase 8's
+    # explicit design: "vector search run in parallel with a Cypher
+    # traversal query, results merged."
+    vector_task = _search_vector(query)
+    graph_task = _search_graph(next(iter(query_codes))) if query_codes else asyncio.sleep(0, result=None)
+    results, graph_result = await asyncio.gather(vector_task, graph_task)
+
     exact_match_found = (
         any(any(code in doc.page_content.upper() for code in query_codes) for doc in results)
         if query_codes else None  # query wasn't about a specific error code -- not applicable
     )
+    graph_match_found = (graph_result is not None) if query_codes else None
 
     data = {
         "results": [
@@ -251,6 +302,8 @@ async def _search_kb(tool_name: str, query: str) -> ToolResult:
             for doc in results
         ],
         "exact_match_found": exact_match_found,
+        "graph": graph_result,
+        "graph_match_found": graph_match_found,
     }
     return ToolResult(
         tool_name=tool_name, success=True, data=data, error=None,

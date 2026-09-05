@@ -19,26 +19,30 @@ if you haven't.**
 
 ## Current status — read before doing anything else
 
-**Planning is complete. Core is complete (Phases 0-7 of 13).** Requirements,
-architecture, evaluation, and a 13-phase build plan are fully drafted and
-have been through 4 review passes (see "Review history" below). Every Core
-phase is done and verified: scaffolding, mock backend microservices, the
-tools layer, the 2 specialist sub-agents, the supervisor agent, the
-FastAPI serving layer, a real 21-scenario evaluation harness (with 3 real
-agent-quality bugs found and fixed by actually running it), and a
-Streamlit demo UI with a live step-by-step agent trace. `POST /diagnose`
-with a valid `X-API-Key` runs the full multi-agent loop end-to-end and
-returns a correct structured diagnosis, verified against real running
-processes with `curl` and a real browser, not just `TestClient`. See
-[`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for exactly what exists
-and what was verified, phase by phase. Docker itself has been verified for
-real (`docker compose config`/`build`/`up`, plus the worked example
-reproduced against the running containers).
+**Planning is complete. Core is complete (Phases 0-7). Extended is in
+progress — Phase 8 (Neo4j) is done (Phase 9 of 13 total not yet started).**
+Requirements, architecture, evaluation, and a 13-phase build plan are fully
+drafted and have been through 4 review passes (see "Review history"
+below). Every Core phase is done and verified: scaffolding, mock backend
+microservices, the tools layer, the 2 specialist sub-agents, the
+supervisor agent, the FastAPI serving layer, a real 21-scenario evaluation
+harness, and a Streamlit demo UI with a live step-by-step agent trace.
+Phase 8 added a real (locally-Dockerized, not Aura — see below) Neo4j
+knowledge graph, merged into `search_knowledge_base` alongside the
+existing Chroma vector search. `POST /diagnose` with a valid `X-API-Key`
+runs the full multi-agent loop end-to-end and returns a correct structured
+diagnosis, verified against real running processes with `curl`, a real
+browser, and a real 21-scenario eval harness run multiple times — not just
+`TestClient`. See [`05-DEVELOPMENT-LOG.md`](05-DEVELOPMENT-LOG.md) for
+exactly what exists and what was verified, phase by phase. Docker itself
+has been verified for real (`docker compose config`/`build`/`up` for all 5
+containers together, including a full down/up data-persistence check for
+Neo4j's named volume).
 
-**The Core → Extended gate is now active.** Per `04-BUILD-PLAN.md`'s
-sequencing principle, Phase 8 (Neo4j) onward does not start until the
-human running this session explicitly says to move into Extended — Core
-being "done" is not itself permission to keep going.
+**Extended work continues phase by phase, same discipline as Core.** Per
+`04-BUILD-PLAN.md`'s sequencing principle, Phase 9 (Kafka) onward does not
+start until the human running this session explicitly says to continue —
+Phase 8 being "done" is not itself permission to keep going.
 
 **If you are an implementing agent: do not jump ahead of the current phase
 recorded in `05-DEVELOPMENT-LOG.md` without the human running this session
@@ -108,13 +112,22 @@ These aren't preferences — violating them undoes the point of the project:
   see Section 3.5 for the GIL-grounded reasoning).
 - **5 tools**, split by domain: Billing/CRM owns `get_order_record` +
   `get_billing_status`; Network owns `get_provisioning_log` +
-  `get_inventory_status` + `search_knowledge_base` (vector via Chroma +
-  graph via Neo4j once Extended).
+  `get_inventory_status` + `search_knowledge_base` (vector via Chroma
+  **and** graph via Neo4j, run in parallel and merged — built, Phase 8).
+- **Knowledge graph (`graph/`, Phase 8):** local Neo4j (Docker, not Aura —
+  the coursework Aura instance had expired; see below), populated by
+  `graph/populate.py` from the same seed data the mock services use.
+  `search_knowledge_base` merges vector results (`exact_match_found`) with
+  a Cypher traversal (`graph_match_found`, plus `cause`/`resolution`/
+  `related_incidents` when found) — either signal counts as a genuine
+  explanation, checked deterministically in `agent/supervisor.py`
+  (`_enforce_kb_grounding`), not left to the classifier LLM's judgment
+  alone (same reasoning as Phase 6's `exact_match_found` fix).
 - **Stack:** FastAPI (serving), LangGraph (orchestration), Pydantic
   (structured I/O everywhere), SQLite-per-service at Core (Postgres/RDS
-  named for Extended), Bedrock-hosted Claude + API Gateway ingress at
-  Extended (direct API + in-app auth/rate-limit at Core, Section 14),
-  pytest (testing strategy, Section 13).
+  named for Extended), Neo4j (Phase 8, built), Bedrock-hosted Claude + API
+  Gateway ingress + Kafka still named-not-built, in-app auth/rate-limit at
+  Core (Section 14), pytest (testing strategy, Section 13).
 - **API layer (`api/main.py`, Phase 5):** `POST /diagnose`, header-based
   `X-API-Key` auth, `slowapi` rate limiting keyed by API key (not IP),
   `correlation_id` = the LangGraph checkpointer's `thread_id`, structured
@@ -164,9 +177,22 @@ fixes were tried first and didn't reliably work. Insufficient-evidence
 recall went 0% → 100% across the fix. Phase 6 also corrected the
 golden dataset's own "conflicting evidence" archetype, which had
 originally expected `insufficient_evidence=True` in direct contradiction
-of Phase 4's own already-tested precedence-resolution behavior. Full
-reasoning for all of these is in `05-DEVELOPMENT-LOG.md`'s Phase 3-7
-entries.
+of Phase 4's own already-tested precedence-resolution behavior. Phase 8's
+own plan assumed the Aura instance from earlier coursework still existed
+(it didn't — auto-deleted from inactivity; swapped for local Docker, both
+named honestly in `docker-compose.yml`), and re-running the eval harness
+(the plan's own explicit requirement) surfaced 2 more real bugs: a
+regression in the just-rewritten KB grounding override (it stopped
+distinguishing "searched, found nothing" from "wasn't even a code-specific
+search," incorrectly penalizing unrelated findings like inventory address
+mismatches), and a genuinely pre-existing bug since Phase 4
+(`apply_precedence_and_pipeline_rules`'s "no true problems" branch always
+returned `insufficient_evidence=True`, even for a confirmed-clean order
+with complete evidence — should have been a confident "no issue found").
+Root cause accuracy dropped from 72% to 44% before both were found and
+fixed; recovered to 72% afterward, with false-confidence rate additionally
+improved from 20% to 0%. Full reasoning for all of these is in
+`05-DEVELOPMENT-LOG.md`'s Phase 3-8 entries.
 
 **If you're reviewing this project:** the scope boundaries (mocked systems,
 no write access, Core/Extended/Optional tiers) are deliberate, reasoned

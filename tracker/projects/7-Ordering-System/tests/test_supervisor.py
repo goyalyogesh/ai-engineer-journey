@@ -6,6 +6,8 @@ from agent.state import DiagnosisOutput, SpecialistFinding
 from agent.supervisor import (
     SpecialistReading,
     SynthesisAnalysis,
+    _addresses_confirmed_matching,
+    _enforce_address_grounding,
     _enforce_kb_grounding,
     _evidence_to_text,
     apply_precedence_and_pipeline_rules,
@@ -267,14 +269,191 @@ def test_enforce_kb_grounding_leaves_genuine_matches_alone():
     assert corrected.network_reading.cause_understood is True
 
 
-def test_no_clear_cause_is_insufficient_evidence():
+def test_enforce_kb_grounding_trusts_graph_match_even_when_vector_misses():
+    # Phase 8: graph traversal and vector search are independent signals --
+    # a genuine graph match (e.g. Neo4j's ErrorCode/Cause/Resolution chain)
+    # must NOT be overridden just because the vector search's closest
+    # document happened to score below its own bar.
+    analysis = SynthesisAnalysis(
+        billing_reading=_reading(False),
+        network_reading=_reading(
+            True, "provisioning", "technical", "provisioning failed",
+            "assign a circuit", cause_understood=True,
+        ),
+        conflicting=False, conflict_description=None,
+    )
+    state = initial_supervisor_state("ORD-X")
+    state["network_finding"] = SpecialistFinding(
+        specialist="network",
+        evidence=[ToolResult(
+            tool_name="search_knowledge_base", success=True,
+            data={
+                "results": [], "exact_match_found": False,
+                "graph": {"cause": "...", "resolution": "...", "related_incidents": []},
+                "graph_match_found": True,
+            },
+            error=None, latency_ms=1.0,
+        )],
+        preliminary_assessment="",
+    )
+    state["billing_finding"] = _finding("billing_crm")
+
+    corrected = _enforce_kb_grounding(analysis, state)
+    assert corrected.network_reading.cause_understood is True
+
+
+def test_enforce_kb_grounding_overrides_when_neither_signal_matches():
+    analysis = SynthesisAnalysis(
+        billing_reading=_reading(False),
+        network_reading=_reading(
+            True, "provisioning", "technical", "provisioning failed",
+            "assign a circuit", cause_understood=True,  # LLM wrongly trusted it
+        ),
+        conflicting=False, conflict_description=None,
+    )
+    state = initial_supervisor_state("ORD-X")
+    state["network_finding"] = SpecialistFinding(
+        specialist="network",
+        evidence=[ToolResult(
+            tool_name="search_knowledge_base", success=True,
+            data={"results": [], "exact_match_found": False, "graph": None, "graph_match_found": False},
+            error=None, latency_ms=1.0,
+        )],
+        preliminary_assessment="",
+    )
+    state["billing_finding"] = _finding("billing_crm")
+
+    corrected = _enforce_kb_grounding(analysis, state)
+    assert corrected.network_reading.cause_understood is False
+
+
+def test_enforce_address_grounding_corrects_hallucinated_mismatch():
+    # Real Phase 8 regression, caught via the eval harness: the classifier
+    # occasionally claimed an "address mismatch" even though provisioning
+    # succeeded and CRM's/Inventory's address strings were identical.
+    analysis = SynthesisAnalysis(
+        billing_reading=_reading(False),
+        network_reading=_reading(
+            True, "inventory", "technical",
+            "Provisioning succeeded, but there is a potential inventory "
+            "data-quality issue due to an address mismatch.",
+            "cross-check the address", cause_understood=True,
+        ),
+        conflicting=False, conflict_description=None,
+    )
+    state = initial_supervisor_state("ORD-X")
+    state["billing_finding"] = SpecialistFinding(
+        specialist="billing_crm",
+        evidence=[ToolResult(
+            tool_name="get_order_record", success=True,
+            data={"address": "600 Birch Dr, Springfield"}, error=None, latency_ms=1.0,
+        )],
+        preliminary_assessment="",
+    )
+    state["network_finding"] = SpecialistFinding(
+        specialist="network",
+        evidence=[
+            ToolResult(
+                tool_name="get_provisioning_log", success=True,
+                data={"status": "succeeded", "circuit_id": "C-600"}, error=None, latency_ms=1.0,
+            ),
+            ToolResult(
+                tool_name="get_inventory_status", success=True,
+                data={"address": "600 Birch Dr, Springfield", "status": "assigned"},
+                error=None, latency_ms=1.0,
+            ),
+        ],
+        preliminary_assessment="",
+    )
+
+    corrected = _enforce_address_grounding(analysis, state)
+    assert corrected.network_reading.has_real_problem is False
+    assert corrected.network_reading.summary == "no problem found"
+
+
+def test_enforce_address_grounding_leaves_a_genuine_mismatch_alone():
+    analysis = SynthesisAnalysis(
+        billing_reading=_reading(False),
+        network_reading=_reading(
+            True, "inventory", "technical", "address mismatch, wrong circuit",
+            "reassign the circuit", cause_understood=True,
+        ),
+        conflicting=False, conflict_description=None,
+    )
+    state = initial_supervisor_state("ORD-X")
+    state["billing_finding"] = SpecialistFinding(
+        specialist="billing_crm",
+        evidence=[ToolResult(
+            tool_name="get_order_record", success=True,
+            data={"address": "400 Pine Rd, Springfield"}, error=None, latency_ms=1.0,
+        )],
+        preliminary_assessment="",
+    )
+    state["network_finding"] = SpecialistFinding(
+        specialist="network",
+        evidence=[
+            ToolResult(
+                tool_name="get_provisioning_log", success=True,
+                data={"status": "succeeded", "circuit_id": "C-500"}, error=None, latency_ms=1.0,
+            ),
+            ToolResult(
+                tool_name="get_inventory_status", success=True,
+                data={"address": "999 Wrong Address Ave, Springfield", "status": "assigned"},
+                error=None, latency_ms=1.0,
+            ),
+        ],
+        preliminary_assessment="",
+    )
+
+    corrected = _enforce_address_grounding(analysis, state)
+    # Addresses genuinely differ -- must NOT be overridden.
+    assert corrected.network_reading.has_real_problem is True
+    assert corrected.network_reading.summary == "address mismatch, wrong circuit"
+
+
+def test_any_tool_failures_false_when_specialist_did_not_run():
+    from agent.supervisor import _any_tool_failures
+    assert _any_tool_failures(None) is False
+
+
+def test_provisioning_succeeded_false_when_specialist_did_not_run():
+    from agent.supervisor import _provisioning_succeeded
+    assert _provisioning_succeeded(None) is False
+
+
+def test_addresses_confirmed_matching_false_when_either_address_unavailable():
+    finding = _finding("billing_crm")  # no evidence at all -- no address to compare
+    assert _addresses_confirmed_matching(finding, finding) is False
+    assert _addresses_confirmed_matching(None, None) is False
+
+
+def test_no_clear_cause_is_insufficient_evidence_when_evidence_incomplete():
+    # evidence_complete=False -- at least one tool call actually failed,
+    # so "no real problem found" genuinely means "couldn't fully tell",
+    # not a confirmed-clean order.
     analysis = SynthesisAnalysis(
         billing_reading=_reading(False), network_reading=_reading(False),
         conflicting=False, conflict_description=None,
     )
-    diagnosis = apply_precedence_and_pipeline_rules(analysis)
+    diagnosis = apply_precedence_and_pipeline_rules(analysis, evidence_complete=False)
     assert diagnosis.insufficient_evidence is True
     assert diagnosis.confidence == "low"
+
+
+def test_no_true_problems_with_complete_evidence_is_a_confirmed_clean_order():
+    # Phase 8 regression, found via the real eval harness: this branch had
+    # always unconditionally returned insufficient_evidence=True, silently
+    # misreporting every genuinely clean order (all evidence gathered
+    # successfully, nothing wrong found) as "couldn't tell" instead of a
+    # confident, correct diagnosis.
+    analysis = SynthesisAnalysis(
+        billing_reading=_reading(False), network_reading=_reading(False),
+        conflicting=False, conflict_description=None,
+    )
+    diagnosis = apply_precedence_and_pipeline_rules(analysis, evidence_complete=True)
+    assert diagnosis.insufficient_evidence is False
+    assert diagnosis.confidence == "high"
+    assert "no issue" in diagnosis.root_cause.lower()
 
 
 # --- synthesize_diagnosis node, with a fake LLM (DI, Section 8/13) ------

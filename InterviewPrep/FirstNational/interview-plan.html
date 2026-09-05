@@ -1,0 +1,422 @@
+<title>First National Interview Playbook</title>
+<style>
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eceef1;
+  --ink: #16233a;
+  --ink-soft: #45536b;
+  --muted: #74839a;
+  --border: #dadfe6;
+  --accent: #2e7d8c;
+  --accent-soft: #dceef1;
+  --amber: #b8842b;
+  --amber-soft: #f3e6d2;
+  --good: #3f7d58;
+  --good-soft: #dfeee4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161f;
+    --surface: #171f2b;
+    --surface-2: #1e2733;
+    --ink: #e9edf3;
+    --ink-soft: #b7c1d1;
+    --muted: #7e8ca3;
+    --border: #2a3444;
+    --accent: #5fb8c7;
+    --accent-soft: #1b3339;
+    --amber: #d9a34b;
+    --amber-soft: #332a17;
+    --good: #6fbe8c;
+    --good-soft: #163325;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161f;
+  --surface: #171f2b;
+  --surface-2: #1e2733;
+  --ink: #e9edf3;
+  --ink-soft: #b7c1d1;
+  --muted: #7e8ca3;
+  --border: #2a3444;
+  --accent: #5fb8c7;
+  --accent-soft: #1b3339;
+  --amber: #d9a34b;
+  --amber-soft: #332a17;
+  --good: #6fbe8c;
+  --good-soft: #163325;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.55;
+  padding: 0 20px 80px;
+}
+.wrap { max-width: 780px; margin: 0 auto; }
+
+h1, h2, h3 {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  color: var(--ink);
+  text-wrap: balance;
+  font-weight: 600;
+}
+p { color: var(--ink-soft); max-width: 68ch; }
+
+/* header */
+header.hero {
+  padding: 48px 0 28px;
+  border-bottom: 1px solid var(--border);
+}
+.eyebrow {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+header.hero h1 { font-size: 2.1rem; margin: 0 0 6px; line-height: 1.15; }
+header.hero .role { color: var(--ink-soft); font-size: 1.05rem; margin: 0 0 22px; }
+
+.infostrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.infostrip div {
+  background: var(--surface);
+  padding: 12px 14px;
+}
+.infostrip .label {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 3px;
+}
+.infostrip .value { font-size: 0.92rem; color: var(--ink); font-weight: 600; }
+
+section { margin-top: 48px; }
+section > h2 {
+  font-size: 1.35rem;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+section > h2 .num {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.lede { font-size: 1rem; margin-bottom: 18px; }
+
+/* evidence table */
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: var(--surface); }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 0.92rem; vertical-align: top; }
+th {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+tr:last-child td { border-bottom: none; }
+td.req { color: var(--ink); font-weight: 600; width: 30%; }
+td.ev { color: var(--ink-soft); }
+
+/* timeline */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: "";
+  position: absolute; left: 8px; top: 6px; bottom: 6px;
+  width: 2px; background: var(--border);
+}
+.day {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.day::before {
+  content: attr(data-n);
+  position: absolute; left: -28px; top: 22px;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.day .daylabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; gap: 12px; flex-wrap: wrap; }
+.day .daylabel .name { font-family: Georgia, serif; font-weight: 700; font-size: 1.08rem; }
+.day .daylabel .date { font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); }
+.day .theme { color: var(--accent); font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; }
+.day ul { margin: 0; padding-left: 18px; }
+.day li { color: var(--ink-soft); margin-bottom: 7px; font-size: 0.93rem; }
+.day li::marker { color: var(--muted); }
+.day.final { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+/* star cards */
+.star { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+.star h3 { font-size: 1rem; margin: 0 0 12px; }
+.star dl { margin: 0; display: grid; grid-template-columns: 60px 1fr; gap: 6px 14px; }
+.star dt {
+  font-family: ui-monospace, monospace; font-size: 0.68rem; letter-spacing: 0.06em;
+  color: var(--accent); text-transform: uppercase; padding-top: 2px;
+}
+.star dd { margin: 0; color: var(--ink-soft); font-size: 0.92rem; padding-bottom: 6px; }
+
+/* callout */
+.callout { background: var(--accent-soft); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin: 16px 0; }
+.callout p { color: var(--ink); margin: 0; font-size: 0.93rem; }
+.callout .tag { font-family: ui-monospace, monospace; font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 6px; }
+
+/* gap boxes */
+.gap { background: var(--amber-soft); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.gap .tag { font-family: ui-monospace, monospace; font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 6px; }
+.gap p { color: var(--ink); margin: 0 0 6px; font-size: 0.92rem; }
+.gap p:last-child { margin-bottom: 0; }
+.gap .fix { color: var(--good); font-weight: 600; }
+
+/* two-col lists */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 640px) { .cols { grid-template-columns: 1fr; } .infostrip { grid-template-columns: repeat(2, 1fr); } }
+.qgroup h3 { font-size: 0.95rem; margin: 0 0 10px; color: var(--ink); }
+.qgroup ul { margin: 0; padding-left: 18px; }
+.qgroup li { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 9px; }
+
+.asklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.asklist li {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+  padding: 12px 14px; font-size: 0.92rem; color: var(--ink-soft);
+}
+.asklist li b { color: var(--ink); }
+
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">Interview Prep &middot; Hiring Manager Screen</p>
+  <h1>First National Interview Playbook</h1>
+  <p class="role">AI Engineer, Application Development &mdash; First National Financial LP</p>
+  <div class="infostrip">
+    <div><span class="label">Interview</span><span class="value">Mon Sep 7, 2026</span></div>
+    <div><span class="label">Format</span><span class="value">Virtual &middot; 45 min</span></div>
+    <div><span class="label">Stage</span><span class="value">Hiring manager</span></div>
+    <div><span class="label">Team</span><span class="value">Res. Underwriting Squad</span></div>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span> What this role actually needs</h2>
+  <p class="lede">Strip the posting down and it's asking for three things, in order: can you build agentic/RAG systems that touch real policy documents; do you know how to make an LLM admit uncertainty instead of guessing, in a domain where guessing wrong is expensive; and can you operate inside a regulated shop's guardrails (security, audit, QA sign-off). Azure/Databricks/MLflow and mortgage-domain background are named as <em>preferred</em>, not required &mdash; don't over-index on the platform-name gap.</p>
+  <div class="callout">
+    <span class="tag">The line to nail</span>
+    <p>"Ability to combine probabilistic AI with deterministic rules and calculations" and "knowledge of retrieval quality, prompt testing, confidence scoring, and error analysis" are lifted almost verbatim from what the eval harness on the Order Diagnosis Agent already proved. That's the anchor story for this whole interview &mdash; see Section 04.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span> Requirement &rarr; your evidence</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>JD asks for</th><th>What you point to</th></tr></thead>
+      <tbody>
+        <tr><td class="req">RAG + agentic workflows, doc intelligence</td><td class="ev">Order Diagnosis Agent: LangGraph supervisor + 2 specialist sub-agents, ChromaDB knowledge-base tool, structured evidence-cited output</td></tr>
+        <tr><td class="req">Probabilistic AI + deterministic rules</td><td class="ev">Eval harness caught the agent confidently fabricating a cause for an unrecognized error code &mdash; fixed the abstain-vs-guess logic, insufficient-evidence recall 0%&rarr;100%</td></tr>
+        <tr><td class="req">Retrieval quality, confidence scoring, error analysis</td><td class="ev">21-scenario harness: LLM-as-judge grading, precision/recall, false-confidence rate, run against real model calls not mocks</td></tr>
+        <tr><td class="req">Production-quality Python, APIs, testing, CI/CD, cloud</td><td class="ev">FastAPI service (auth + rate limiting), Bell Canada: Docker/K8s on AWS, GitHub Actions CI/CD</td></tr>
+        <tr><td class="req">Security / auditability safeguards</td><td class="ev">Correlation-ID-linked structured logging of every tool call and graph transition, API-key auth, per-key rate limits</td></tr>
+        <tr><td class="req">Cross-functional collab (product, QA, security, platform)</td><td class="ev">Bell: API contracts &amp; runbooks for partner teams; Team SI: led delivery across 3 concurrent client projects</td></tr>
+        <tr><td class="req">Financial / regulated-data domain</td><td class="ev">Berkadia: Loan View Management System &mdash; REST APIs + Entity Framework + 20 SQL Server procs over live loan/partner financial data</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span> Three days</h2>
+  <div class="timeline">
+
+    <div class="day" data-n="1">
+      <div class="daylabel"><span class="name">Research &amp; mapping</span><span class="date">Fri Sep 4</span></div>
+      <div class="theme">~2 hrs</div>
+      <ul>
+        <li>Read the JD three times; write your own one-line summary of what the team actually builds (see Section 01) &mdash; you'll use it in your "why this role" answer.</li>
+        <li>Research First National Financial itself: business model (residential mortgage originator/underwriter), the "AI Factory" shared-services framing, any recent news or investor commentary. This wasn't verifiable from the posting alone &mdash; spend 20 min on their site / recent press.</li>
+        <li>Re-skim your own <code>01-REQUIREMENTS.md</code> and <code>03-EVALUATION.md</code> for the Order Diagnosis Agent so the exact numbers (21 scenarios, 0%&rarr;100% recall, false-confidence rate) are fresh, not paraphrased from memory.</li>
+        <li>Draft a 90-second "tell me about yourself" that bridges Bell Canada &rarr; Order Diagnosis Agent &rarr; why FNF's mortgage-policy problem is the natural next step.</li>
+      </ul>
+    </div>
+
+    <div class="day" data-n="2">
+      <div class="daylabel"><span class="name">Technical refresh &amp; stories</span><span class="date">Sat Sep 5</span></div>
+      <div class="theme">~3 hrs</div>
+      <ul>
+        <li>30&ndash;45 min skim: Azure OpenAI Service (how it differs operationally from OpenAI/Bedrock), Databricks + MLflow at a conceptual level, Azure AI Search / Vector Search basics. You don't need hands-on depth &mdash; you need to not go blank if asked.</li>
+        <li>Write out the 4 STAR stories in Section 05 as bullet notes (not full scripts) and say each one out loud once, timed to ~90 seconds.</li>
+        <li>Prepare a plain-language answer to "how do you combine deterministic rules with an LLM's judgment" that doesn't lean on jargon &mdash; practice saying it to someone non-technical.</li>
+        <li>Draft your 5&ndash;6 questions for the hiring manager (Section 07).</li>
+      </ul>
+    </div>
+
+    <div class="day" data-n="3">
+      <div class="daylabel"><span class="name">Mock run &amp; polish</span><span class="date">Sun Sep 6</span></div>
+      <div class="theme">~2 hrs</div>
+      <ul>
+        <li>Run a full 45-minute mock, ideally out loud to another person or recorded: intro, 2&ndash;3 technical questions, 2 behavioral questions, your questions back.</li>
+        <li>Cut anything that rambled past 2 minutes. Hiring-manager screens reward tight, structured answers over exhaustive ones.</li>
+        <li>Confirm the video-call logistics (link, camera, mic, quiet room, notes visible off-screen but not read from).</li>
+        <li>Stop adding new material by evening. Light review only, then rest.</li>
+      </ul>
+    </div>
+
+    <div class="day final" data-n="&#9679;">
+      <div class="daylabel"><span class="name">Interview day</span><span class="date">Mon Sep 7</span></div>
+      <div class="theme">Morning of</div>
+      <ul>
+        <li>30-minute skim of this page, not new research. Re-read Sections 02 and 05 last.</li>
+        <li>Log into the call 3&ndash;5 min early. Have the JD and your evidence table (Section 02) open off-camera, not the whole plan.</li>
+        <li>First answer sets the tone &mdash; lead with the eval-harness story if the intro question gives you an opening for it.</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span> How to talk about the Order Diagnosis Agent</h2>
+  <p class="lede">This is your strongest card &mdash; it maps almost line-for-line to the required qualifications. Two framing rules:</p>
+  <div class="callout">
+    <span class="tag">Frame it honestly, up front</span>
+    <p>It's a portfolio project modeling real enterprise complexity you saw at Bell &mdash; the four "backend systems" (CRM, billing, provisioning, network inventory) are mock services with synthetic data, not real telecom infrastructure. What's real: production-grade engineering practices &mdash; auth, rate limiting, structured observability, and an evaluation harness that found and fixed a genuine reliability bug. Say this plainly if asked "is this in production" &mdash; it reads as rigor, not a weakness, and gets ahead of the follow-up question.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">Translate the architecture into their domain, unprompted</span>
+    <p>Supervisor + specialist sub-agents over CRM/billing/network maps directly onto a supervisor + specialist agents over income-doc extraction / policy-rule interpretation / risk calculation. Say that mapping out loud &mdash; it shows you're not just describing a past project, you're already thinking in their architecture.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span> Four stories, loaded and ready</h2>
+
+  <div class="star">
+    <h3>The eval harness that caught a false-confidence bug &mdash; your anchor story</h3>
+    <dl>
+      <dt>Situation</dt><dd>Built a 21-scenario evaluation harness (LLM-as-judge, precision/recall, false-confidence rate) for the multi-agent diagnosis system.</dd>
+      <dt>Task</dt><dd>Verify the agent wasn't just accurate on easy cases, but knew when it didn't know.</dd>
+      <dt>Action</dt><dd>Ran it against real model calls, not mocks. It surfaced a genuine bug: an unrecognized error code was being confidently misdiagnosed instead of flagged as insufficient evidence. Traced it to the tool/prompt design and fixed the abstain logic.</dd>
+      <dt>Result</dt><dd>Insufficient-evidence recall went from 0% to 100% &mdash; a silent failure mode became a measured, fixed guarantee. This is exactly the "know when not to trust the model" property a lending decision needs.</dd>
+    </dl>
+  </div>
+
+  <div class="star">
+    <h3>Production RAG at Bell Canada</h3>
+    <dl>
+      <dt>Situation</dt><dd>Needed context-aware assistants over provisioning/assurance data serving live operations.</dd>
+      <dt>Task</dt><dd>Deliver a RAG pipeline accurate and reliable enough to run in production, not a demo.</dd>
+      <dt>Action</dt><dd>Designed the pipeline with LangChain/GPT-4 and vector DBs (Pinecone, ChromaDB); deployed containerized inference on AWS (Bedrock/Lambda/ECS) with Docker, Kubernetes, and GitHub Actions CI/CD; built structured logging and monitoring.</dd>
+      <dt>Result</dt><dd>92% retrieval accuracy in production, plus observability that sped up incident triage.</dd>
+    </dl>
+  </div>
+
+  <div class="star">
+    <h3>Translating ambiguous requirements into shipped software</h3>
+    <dl>
+      <dt>Situation</dt><dd>At Team SI, led delivery across 3 concurrent client projects (healthcare, agricultural equipment) with different stakeholders and unclear scope.</dd>
+      <dt>Task</dt><dd>Own estimation, sprint planning, and direct client communication simultaneously across all three.</dd>
+      <dt>Action</dt><dd>Built a reusable React/Vue component library shared across projects to cut translation-to-code time; ran CI/CD automation on Azure DevOps.</dd>
+      <dt>Result</dt><dd>Release cycle went from multi-day manual deploys to same-day automated releases, across all three engagements.</dd>
+    </dl>
+  </div>
+
+  <div class="star">
+    <h3>Lending-domain systems, before AI was the job</h3>
+    <dl>
+      <dt>Situation</dt><dd>At Berkadia, partners tracked loans across a fragmented multi-system workflow.</dd>
+      <dt>Task</dt><dd>Build a single-pane-of-glass view from origination through current status.</dd>
+      <dt>Action</dt><dd>Designed REST APIs, an Entity Framework data layer, and 20+ SQL Server stored procedures for real-time financial data access, plus Azure Queue-based async processing to decouple ingestion from display.</dd>
+      <dt>Result</dt><dd>Partners got one reliable view instead of five disconnected systems &mdash; direct, if pre-AI, exposure to lending data models and the reliability bar financial data demands.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span> Questions to expect</h2>
+  <div class="cols">
+    <div class="qgroup">
+      <h3>Technical</h3>
+      <ul>
+        <li>Walk me through the Order Diagnosis Agent's architecture.</li>
+        <li>How would you turn an underwriting policy document into an agent's decision logic?</li>
+        <li>How do you combine deterministic rules with an LLM's probabilistic output?</li>
+        <li>How do you measure and improve retrieval quality in a RAG system?</li>
+        <li>How does the system decide when to abstain instead of answering?</li>
+        <li>What's your hands-on experience with Azure OpenAI / Databricks / MLflow?</li>
+        <li>How do you test and version prompts as they change?</li>
+        <li>How would you make an AI-generated decision auditable for compliance?</li>
+      </ul>
+    </div>
+    <div class="qgroup">
+      <h3>Behavioral</h3>
+      <ul>
+        <li>Tell me about a time you found and fixed a reliability bug in an AI system.</li>
+        <li>Tell me about turning ambiguous business requirements into working software.</li>
+        <li>Tell me about working cross-functionally with QA, security, or platform teams.</li>
+        <li>Tell me about ramping up on a new platform or tool quickly.</li>
+        <li>Why this role, why First National Financial?</li>
+        <li>Where do you want to be in your career in 2&ndash;3 years?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">07</span> Questions for the hiring manager</h2>
+  <ul class="asklist">
+    <li><b>On the "AI Factory":</b> What does the shared services layer actually provide today &mdash; model access, eval tooling, deployment, or all three?</li>
+    <li><b>On the deterministic/probabilistic split:</b> What's the current balance between rule-based logic and LLM judgment in a live underwriting workflow?</li>
+    <li><b>On UAT &amp; sign-off:</b> How is a change to a policy prompt or agent validated before production &mdash; who reviews it, and what does UAT look like here?</li>
+    <li><b>On confidence:</b> How is model uncertainty currently surfaced to underwriters &mdash; a score, a flag, a human-review queue?</li>
+    <li><b>On the team:</b> How does the Residential Underwriting Product Squad work with QA, security, and compliance day to day?</li>
+    <li><b>On success:</b> What does success in this role look like at the 6-month mark?</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">08</span> The two gaps &mdash; name them before they're asked</h2>
+  <div class="gap">
+    <span class="tag">Platform: Azure / Databricks vs. AWS</span>
+    <p>Your production GenAI experience is AWS-centric (Bedrock, Lambda, ECS); the posting prefers Azure OpenAI Service, Databricks, and MLflow.</p>
+    <p><span class="fix">Say:</span> "My hands-on hosting has been AWS, but the prompt engineering, retrieval design, and eval work are platform-agnostic &mdash; and I've already run CI/CD on Azure DevOps at a prior role. I'd expect to be productive on Azure/Databricks within the first few weeks."</p>
+  </div>
+  <div class="gap">
+    <span class="tag">Domain: telecom vs. regulated mortgage lending</span>
+    <p>Most of your AI work is telecom (Bell); the regulated-lending experience (Berkadia) predates the AI-engineer part of your career.</p>
+    <p><span class="fix">Say:</span> lead with the domain-transferable instinct &mdash; evidence-cited outputs, structured audit logging, abstain-instead-of-guess &mdash; then mention Berkadia's lending data model as prior direct exposure to the domain, not as your main pitch.</p>
+  </div>
+</section>
+
+<footer>Built from the LinkedIn posting (First National Financial LP, AI Engineer &ndash; Application Development) and the Order Diagnosis Agent project docs. Verify company-specific facts (recent news, "AI Factory" details) independently before the call.</footer>
+
+</div>

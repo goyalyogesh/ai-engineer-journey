@@ -657,6 +657,25 @@ isolation-then-integration pattern as `02-ARCHITECTURE.md` Section 13:**
   both the vector-matched explanation *and* the graph-traversed resolution
   path + related incident IDs.
 
+**Corrected during actual Phase 8 implementation — see
+`05-DEVELOPMENT-LOG.md`'s Phase 8 entry for the full story:**
+- **Not Aura.** The Neo4j Aura instance this section assumed still existed
+  had been auto-deleted from inactivity by the time this phase started
+  (verified: its hostname no longer resolves at all). `docker-compose.yml`
+  now runs a **local** Neo4j container instead — genuinely real for
+  testing/verification purposes, just not the specific hosted product
+  named here. Aura remains the named production-equivalent target.
+- **3 more node types than listed** (`ProvisioningState`, `Cause`,
+  `Resolution`, `Incident`) — the 5 named above don't actually cover the
+  endpoints of "the relationships from Section 5.1/5.2" this same
+  paragraph also asks for; a relationship needs both its endpoints
+  constrained to be meaningful.
+- **The eval re-run is not optional busywork** — it caught 2 real,
+  previously-undetected regressions (one introduced by this phase, one
+  pre-existing since Phase 4) that would have shipped silently otherwise.
+  Root cause accuracy genuinely dropped from 72% to 44% on the first
+  post-merge run, before both were found and fixed.
+
 ## Phase 9 — Kafka event-driven trigger [EXTENDED]
 
 **Goal:** FR7's async half.

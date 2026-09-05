@@ -715,15 +715,23 @@ for no benefit.
 **Framework:** `pytest`, consistent with no new tooling decision needed —
 standard choice, not a differentiator worth deep design discussion here.
 
-**Coverage:** `pytest-cov`, run via `pytest --cov=agent --cov=api`. Scoped
-to `agent/` and `api/` specifically — not `mock_services/`, which is
+**Coverage:** `pytest-cov`, run via `pytest --cov=agent --cov=api --cov=eval --cov=graph`
+(grew from `agent`/`api` alone as `eval/` and `graph/` were built in
+Phases 6/8). Scoped to those specifically — not `mock_services/`, which is
 intentionally simple CRUD wrappers around a schema, not the part of the
-system whose correctness this project is actually about. **Reported, not
-gated** — no enforced percentage threshold, since chasing a number (e.g.
-100%) is a vanity metric that doesn't mean correct behavior, the same
-"illustrative, not a production claim" honesty already applied to the eval
-metrics (`03-EVALUATION.md` Section 5). A CI gate enforcing a coverage
-floor is exactly the kind of thing Section 10's named-not-built
+system whose correctness this project is actually about. Within that
+scope, two kinds of file are expected to sit well under 100% and that's
+fine, not a gap: orchestration scripts meant to be run directly and
+verified by their own real output (`eval/run_eval.py`'s printed metrics
+report, `graph/populate.py`'s real graph content) rather than exercised
+line-by-line in a unit test, and vendored utility modules
+(`graph/neo4j_for_adk.py`) verified by using them for real rather than
+re-testing code that already works. **Reported, not gated** — no enforced
+percentage threshold, since chasing a number (e.g. 100%) is a vanity
+metric that doesn't mean correct behavior, the same "illustrative, not a
+production claim" honesty already applied to the eval metrics
+(`03-EVALUATION.md` Section 5). A CI gate enforcing a coverage floor is
+exactly the kind of thing Section 10's named-not-built
 "CI/CD with eval-gated deploys" item would eventually wrap this into — not
 built here, same reasoning as everywhere else that item applies.
 

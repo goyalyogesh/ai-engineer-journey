@@ -727,6 +727,201 @@ begin until explicitly requested next.
 
 ---
 
+## Phase 8 — Neo4j knowledge graph [EXTENDED]
+
+**Status:** ✅ Done. First Extended-tier phase — explicitly requested
+after Core. Found and fixed 4 real bugs via real verification (one
+infrastructure problem before any code was written, one in my own new
+Cypher-parsing code, and two genuine regressions in existing supervisor
+logic, caught by re-running the eval harness for real rather than assuming
+"the code compiles" meant "nothing broke").
+
+**What was built:**
+- `graph/neo4j_for_adk.py` — vendored from `python/neo4j_for_adk.py`
+  (02-ARCHITECTURE.md Section 5's "real infrastructure reuse" note), a
+  synchronous Neo4j client wrapper with a ready `graphdb` singleton.
+- `graph/schema.cypher` — constraints/indexes for the entity graph
+  (`Customer`, `Order`, `Circuit`, `Address`, `ProvisioningState`) and the
+  GraphRAG knowledge base (`ErrorCode`, `Cause`, `Resolution`, `Incident`).
+- `graph/populate.py` — idempotently loads all 21 seeded orders (reusing
+  `mock_services/*/seed_data.py` directly, not a second hand-maintained
+  copy) into the entity graph, plus a hand-built cause/resolution/
+  related-incident chain for the 2 known error codes (`ERR_4471`,
+  `ERR_BILL_MISMATCH`) — deliberately matching exactly which codes the
+  Chroma KB already covers, so `ERR_9999`/`8888`/`7777` stay unexplained
+  in *both* retrieval methods, preserving Phase 6's FR6 scenarios.
+- `agent/tools.py` — `search_knowledge_base` now runs vector search
+  (`_search_vector`, extracted from the old inline code) and graph
+  traversal (`_search_graph`) **in parallel** (`asyncio.gather`, Section
+  3.5's pattern applied to one tool's two retrieval methods), merging
+  both into one `ToolResult` with `exact_match_found` (vector),
+  `graph_match_found` (graph), and `graph` (the cause/resolution/
+  incidents, when found).
+- `agent/supervisor.py` — the classification prompt and
+  `_enforce_kb_grounding`'s deterministic override both updated to treat
+  *either* signal as genuine grounding, not just the vector one.
+- `docker-compose.yml` — a `neo4j` service (local, not Aura — see below).
+- `tests/test_kb_vector.py`, `tests/test_kb_graph.py`,
+  `tests/test_kb_merged.py` — the isolated-then-integration test split the
+  build plan's Definition of Done calls for. The old KB tests in
+  `tests/test_tools.py` moved into `test_kb_merged.py`, since by this
+  phase `search_knowledge_base` always exercises both retrieval methods
+  together — they stopped being "just a vector search test" the moment
+  this phase's merge logic landed.
+
+**Bug #1 — the planned infrastructure didn't exist (found before writing
+any code):** `02-ARCHITECTURE.md` Section 5 called for reusing the real
+Neo4j Aura instance from earlier coursework. Its hostname returned
+`NXDOMAIN` — not a transient outage, the free-tier instance had been
+auto-paused-then-deleted from inactivity. Flagged directly, asked the user
+how to proceed (rather than silently improvising): chose a local Neo4j via
+Docker, same real-infrastructure-for-testing philosophy as the mock
+services, honestly documented as a Core/Extended-swap divergence from the
+original plan (same pattern as SQLite→Postgres, Chroma→Pinecone
+elsewhere in this project) rather than a downgrade to a stub.
+
+**Bug #2 — a semicolon used as English punctuation broke Cypher statement
+parsing:** `graph/populate.py`'s `apply_schema()` originally split
+`schema.cypher` on `;` to run each `CREATE CONSTRAINT` separately — but
+one of `schema.cypher`'s own `//` comments used a semicolon as ordinary
+prose punctuation, and the naive split treated it as a statement
+terminator, silently chopping the real statement that followed. Fixed by
+stripping comment lines *before* splitting on `;`, so comment content can
+never affect statement boundaries again, regardless of what any future
+comment says — caught immediately on the very first real run (`python -m
+graph.populate` failed with a Cypher syntax error), not discovered later.
+
+**Bug #3 — a real regression in `_enforce_kb_grounding`, caught by
+re-running the eval harness (the build plan's own explicit Phase 8
+requirement):** first full re-run after wiring in the graph showed root
+cause accuracy drop from 72% (Phase 6/7 baseline) to 44% — a real
+regression, not noise. Root cause: the grounding override's rewrite for 2
+signals stopped distinguishing `exact_match_found=False` ("we looked up
+this specific code and found nothing") from `exact_match_found=None`
+("this query wasn't about a specific code at all — not applicable").
+Any `search_knowledge_base` call — even an irrelevant one, e.g. a network
+specialist confirming an address mismatch has no reason to search the KB
+— was being treated as a failed lookup, forcing `cause_understood=False`
+for problems the KB was never asked about. Fixed by only counting
+*code-specific* calls (`exact_match_found is not None`) toward the
+override.
+
+**Bug #4 — a genuinely pre-existing bug, only now visible because Phase 8
+was the first time every archetype got scrutinized this closely:**
+`apply_precedence_and_pipeline_rules`'s "no true problems found" fallback
+had unconditionally returned `insufficient_evidence=True` since Phase 4 —
+correct when the investigation genuinely couldn't tell, wrong when both
+specialists positively confirmed nothing was wrong (a clean order).
+Fixed by adding `evidence_complete` (computed from whether any tool call
+actually failed across both findings): a confirmed-clean order with
+complete evidence now reports `insufficient_evidence=False,
+confidence="high"`, not a shrug.
+
+**Bug #5 — LLM reasoning variance, not fixable by better prompt wording
+alone (same lesson as Phase 6):** even after fixing bug #3, the
+classifier still occasionally hallucinated an "address mismatch" for
+`ORD-90005` (a genuinely clean order — CRM's and Inventory's address
+strings are literally identical) despite both addresses being visible in
+its own evidence. A strengthened prompt instruction (compare the strings
+literally) was tried first and did NOT reliably fix it (re-verified with
+repeated real requests, still wrong on 2 of 3 runs). Fixed deterministically
+instead: `_enforce_address_grounding()` directly compares
+`get_order_record`'s and `get_inventory_status`'s address strings in code,
+and forces `has_real_problem=False` when provisioning succeeded *and* the
+addresses are confirmed identical — verified consistently correct across
+3 repeated real requests afterward.
+
+**Metrics — before, during, and after the regression (same 21 scenarios,
+real runs each time):**
+
+| Metric | Phase 6/7 baseline | After merge (bug #3/#4 present) | After all fixes |
+|---|---|---|---|
+| Root cause accuracy | 72% | 44% | **72%** |
+| False-confidence rate | 20% | 0% | **0%** |
+| Insufficient-evidence precision | 60% | 33% | **60%** |
+| Insufficient-evidence recall | 100% | 100% | **100%** |
+
+Root cause accuracy fully recovered (not just reverted — the false-
+confidence rate improvement holds, and 2 durable bugs unrelated to the
+graph itself got fixed along the way).
+
+**Verification actually performed:**
+- Connectivity to the (now-deleted) Aura instance tested directly and
+  confirmed genuinely gone (`NXDOMAIN`, not a network blip) before
+  proposing an alternative.
+- Local Neo4j connectivity verified for real immediately after
+  `docker compose up -d neo4j`, before writing any schema/population code.
+- `python -m graph.populate` run for real; verified with direct Cypher
+  queries afterward (node counts per label, the full `ERR_4471`
+  cause/resolution/incident chain, and the worked example's CRM→Order→
+  ProvisioningState join) — not just "the script exited 0."
+- `pytest tests/test_kb_vector.py tests/test_kb_graph.py tests/test_kb_merged.py -v`
+  — 11/11 passed on first correct run.
+- Full suite: `pytest -v --cov=agent --cov=api --cov=eval --cov=graph
+  --cov-report=term-missing` — **87/87 passed**, 100% coverage on every
+  agent/api/eval file; `graph/neo4j_for_adk.py` (78%, a vendored utility —
+  verified by using it for real, not chasing coverage on unused helper
+  functions) and `graph/populate.py` (0%, verified by direct execution +
+  Cypher inspection, same reasoning as `eval/run_eval.py`) are the 2
+  deliberate exceptions, matching `02-ARCHITECTURE.md` Section 13's
+  updated coverage-scope note.
+- `docker compose down && docker compose up -d` — full fresh recreate of
+  all 5 containers (4 mock services + neo4j), verified healthy, and
+  confirmed the graph data survived the recreate via the named
+  `neo4j_data` volume (re-queried node counts afterward — unchanged).
+- `python eval/run_eval.py` run for real **3 times** across this phase
+  (baseline-confirming run, regression-revealing run, fix-confirming run)
+  against the real running stack — the metrics table above is 3 real
+  reports, not one run with assumed deltas.
+
+**Next:** Phase 9 — Kafka event-driven trigger.
+
+---
+
+## Review — Phase 0 through Phase 8, requested explicitly after Phase 8
+
+One more real gap found and fixed, beyond the 5 bugs already logged above:
+
+**The mock-service Docker images were stale.** They'd last been built
+back around Phase 1/5's own Docker verification — before Phase 6 grew the
+seed data from 7 orders to 21, and before Phase 8 added 3 more inventory
+records. `docker compose up` would have silently served old data,
+quietly contradicting this project's own "Docker verified for real"
+claims the moment anyone actually ran it rather than trusting the
+already-written docs. Rebuilt all 4 mock-service images
+(`docker compose build crm billing provisioning inventory`), restarted
+the full stack, and confirmed directly against the running containers
+(not just re-reading the Dockerfiles) that a Phase 6 order
+(`ORD-90013`) and a Phase 8 inventory record (`C-800`) both actually
+exist in the rebuilt images.
+
+**Full clean-slate verification performed:**
+- `pip install -e ".[dev]"` from a clean environment — resolves without error.
+- `docker compose build` + `docker compose up -d` for all 5 containers
+  (4 mock services + neo4j) together — all healthy.
+- `pytest -v --cov=agent --cov=api --cov=eval --cov=graph --cov-report=term-missing`
+  — **87/87 passed**, 100% coverage on every `agent`/`api`/`eval` file,
+  99% on `agent/tools.py` (1 known non-gap, Phase 2), and the 2 documented
+  `graph/` exceptions (vendored utility module, orchestration script) —
+  run against the mock services' own local `uvicorn` instances (pytest's
+  `conftest.py` fixture), with the real Neo4j container providing the
+  graph half.
+- `docker compose down` then a fresh `docker compose up -d` — full
+  container recreation, confirmed Neo4j's graph data survived via the
+  named `neo4j_data` volume (re-queried node counts, unchanged from
+  before the recreate).
+- `git status` across the whole project folder — no stray/uncommitted
+  clutter (no `.db`, `.jsonl`, `__pycache__`, etc.), consistent with
+  `.gitignore` still correctly covering everything Phase 8 generates
+  (nothing new needed — Neo4j's data lives in a Docker-managed volume,
+  never touches the local filesystem directly).
+
+**Everything else checked out** — no further gaps found across the full
+Phase 0-8 review beyond the 5 bugs and 1 stale-image issue already fixed
+and logged above.
+
+---
+
 ## Phase 5 — FastAPI serving layer
 
 **Status:** ✅ Done.

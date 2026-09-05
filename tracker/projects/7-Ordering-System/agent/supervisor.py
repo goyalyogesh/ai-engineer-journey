@@ -84,14 +84,26 @@ def build_classification_prompt(
         "- has_real_problem: did their evidence show an actual, confirmed "
         "problem (e.g. an active billing hold, a provisioning failure, no "
         "circuit assigned)? A tool call that failed/was 'unavailable' is "
-        "inconclusive, not itself a confirmed problem.\n"
+        "inconclusive, not itself a confirmed problem. If get_order_record's "
+        "address and get_inventory_status's address are BOTH present, "
+        "compare them literally, character by character -- if they are the "
+        "same string, that is NOT an address mismatch, no matter how "
+        "confident it might feel to flag it as one; only report a mismatch "
+        "if the two address strings actually differ.\n"
         "- cause_understood: is there a specific, evidence-backed "
         "explanation for that problem? A search_knowledge_base result "
-        "with exact_match_found=false means the knowledge base has NO "
-        "real explanation for that code/fact -- it only returned its "
-        "closest, unrelated match, which does NOT count as "
-        "cause_understood=true. Set it false and let summary say the "
-        "cause is unknown.\n"
+        "carries two independent signals: exact_match_found (vector "
+        "search) and graph_match_found (a Cypher graph traversal that, "
+        "when true, also gives you 'graph': {cause, resolution, "
+        "related_incidents}). If EITHER is true, the cause is genuinely "
+        "understood -- trust the graph's cause/resolution over a vague "
+        "vector snippet when both are present, since the graph is a "
+        "curated, structured fact rather than a similarity guess. If BOTH "
+        "are false (or the query wasn't about a specific error code at "
+        "all), the knowledge base has NO real explanation -- it only "
+        "returned its closest, unrelated vector match, which does NOT "
+        "count as cause_understood=true. Set it false and let summary say "
+        "the cause is unknown.\n"
         "- stage: which pipeline stage the problem belongs to -- crm, "
         "billing, provisioning, or inventory (null if no real problem).\n"
         "- system_type: 'technical' for provisioning/inventory evidence, "
@@ -124,10 +136,30 @@ def _unexplained_problem_diagnosis(evidence_summaries: list[str]) -> DiagnosisOu
     )
 
 
-def apply_precedence_and_pipeline_rules(analysis: SynthesisAnalysis) -> DiagnosisOutput:
+def _any_tool_failures(finding: SpecialistFinding | None) -> bool:
+    if finding is None:
+        return False
+    return any(not e.success for e in finding.evidence)
+
+
+def apply_precedence_and_pipeline_rules(
+    analysis: SynthesisAnalysis, evidence_complete: bool = True
+) -> DiagnosisOutput:
     """Section 3.7's precedence rule + FR10's pipeline-order rule, as
     plain, auditable Python -- not LLM judgment. Deterministic and fast to
-    unit test (02-ARCHITECTURE.md Section 13)."""
+    unit test (02-ARCHITECTURE.md Section 13).
+
+    `evidence_complete` distinguishes two outcomes the original version
+    conflated into one (caught during Phase 8's eval re-run: it broke the
+    "clean order" archetype, which had likely been silently wrong since
+    Phase 4): neither specialist finding a real problem can mean either
+    "confirmed nothing is wrong" (every tool call succeeded, both
+    readings genuinely support a clean order) or "couldn't actually tell"
+    (a tool call failed/was unavailable, so the investigation itself was
+    incomplete). Those are not the same answer -- the first is a
+    confident, correct diagnosis; the second is a genuine
+    insufficient_evidence case.
+    """
     readings = {
         "billing_crm": analysis.billing_reading,
         "network": analysis.network_reading,
@@ -189,6 +221,19 @@ def apply_precedence_and_pipeline_rules(analysis: SynthesisAnalysis) -> Diagnosi
             insufficient_evidence=False,
         )
 
+    if evidence_complete:
+        # Both specialists genuinely investigated (no failed/unavailable
+        # tool calls) and neither found a real problem -- a confirmed
+        # clean order, not an ambiguous one. This is a positive finding,
+        # not a shrug.
+        return DiagnosisOutput(
+            root_cause="No issue found -- all available evidence indicates the order is proceeding normally",
+            confidence="high",
+            evidence=[analysis.billing_reading.summary, analysis.network_reading.summary],
+            recommended_action="No action needed",
+            insufficient_evidence=False,
+        )
+
     return DiagnosisOutput(
         root_cause="no clear cause identified from available evidence",
         confidence="low",
@@ -232,15 +277,33 @@ def _kb_search_found_no_match(finding: SpecialistFinding | None) -> bool:
     # doesn't *always* honor exact_match_found=False on its own, even
     # though it's an explicit instruction (05-DEVELOPMENT-LOG.md's Phase 6
     # finding -- gpt-4o-mini followed it in most, not all, cases). Since
-    # exact_match_found is already a deterministic signal computed in
-    # agent/tools.py, cross-checking it here in code closes the gap
-    # completely instead of just reducing it.
+    # exact_match_found/graph_match_found are already deterministic
+    # signals computed in agent/tools.py, cross-checking them here in code
+    # closes the gap completely instead of just reducing it.
+    #
+    # Phase 8 extends this to 2 independent signals (vector + graph) --
+    # "no match" now means every *code-specific* search_knowledge_base
+    # call this specialist made (there could be more than one) came back
+    # with neither signal true. A real regression caught during Phase 8's
+    # own eval re-run: only calls where exact_match_found is explicitly
+    # False (a code was actually looked up and came back empty) count as
+    # "searched, found nothing" -- a call where it's None (the query
+    # wasn't about a specific error code at all, e.g. a specialist
+    # confirming an address mismatch has no reason to search the KB) must
+    # be excluded entirely, not treated as a failed lookup for a problem
+    # the KB was never asked about in the first place.
     if finding is None:
         return False
-    return any(
-        e.tool_name == "search_knowledge_base" and e.success
-        and isinstance(e.data, dict) and e.data.get("exact_match_found") is False
-        for e in finding.evidence
+    code_specific_calls = [
+        e for e in finding.evidence
+        if e.tool_name == "search_knowledge_base" and e.success and isinstance(e.data, dict)
+        and e.data.get("exact_match_found") is not None
+    ]
+    if not code_specific_calls:
+        return False
+    return not any(
+        e.data.get("exact_match_found") is True or e.data.get("graph_match_found") is True
+        for e in code_specific_calls
     )
 
 
@@ -249,6 +312,51 @@ def _enforce_kb_grounding(analysis: SynthesisAnalysis, state: SupervisorState) -
         analysis.billing_reading.cause_understood = False
     if _kb_search_found_no_match(state["network_finding"]):
         analysis.network_reading.cause_understood = False
+    return analysis
+
+
+def _provisioning_succeeded(finding: SpecialistFinding | None) -> bool:
+    if finding is None:
+        return False
+    return any(
+        e.tool_name == "get_provisioning_log" and e.success and e.data
+        and e.data.get("status") == "succeeded"
+        for e in finding.evidence
+    )
+
+
+def _addresses_confirmed_matching(
+    billing_finding: SpecialistFinding | None, network_finding: SpecialistFinding | None
+) -> bool:
+    order_address = None
+    for e in (billing_finding.evidence if billing_finding else []):
+        if e.tool_name == "get_order_record" and e.success and e.data:
+            order_address = e.data.get("address")
+    inventory_address = None
+    for e in (network_finding.evidence if network_finding else []):
+        if e.tool_name == "get_inventory_status" and e.success and e.data:
+            inventory_address = e.data.get("address")
+    if order_address is None or inventory_address is None:
+        return False
+    return order_address.strip().lower() == inventory_address.strip().lower()
+
+
+def _enforce_address_grounding(analysis: SynthesisAnalysis, state: SupervisorState) -> SynthesisAnalysis:
+    # A real, observed regression during Phase 8's own eval re-run: the
+    # classifier LLM occasionally hallucinated an "address mismatch" even
+    # when provisioning succeeded and the CRM/Inventory address strings
+    # were literally identical -- both facts are directly, deterministically
+    # checkable from raw evidence (no LLM judgment needed), and a strengthened
+    # prompt instruction alone did not reliably stop it (same lesson as
+    # Phase 6: don't trust prompt wording for something code can just
+    # verify). When both facts hold, the network reading cannot genuinely
+    # have a real problem here -- force it, don't just hope the model
+    # gets it right.
+    if _provisioning_succeeded(state["network_finding"]) and _addresses_confirmed_matching(
+        state["billing_finding"], state["network_finding"]
+    ):
+        analysis.network_reading.has_real_problem = False
+        analysis.network_reading.summary = "no problem found"
     return analysis
 
 
@@ -264,7 +372,12 @@ def make_synthesize_diagnosis(llm: BaseChatModel | None = None):
         try:
             analysis = await structured_llm.ainvoke(prompt)
             analysis = _enforce_kb_grounding(analysis, state)
-            diagnosis = apply_precedence_and_pipeline_rules(analysis)
+            analysis = _enforce_address_grounding(analysis, state)
+            evidence_complete = not (
+                _any_tool_failures(state["billing_finding"])
+                or _any_tool_failures(state["network_finding"])
+            )
+            diagnosis = apply_precedence_and_pipeline_rules(analysis, evidence_complete)
         except Exception as e:
             # agent/state.py's confidence_matches_evidence_state validator
             # (and apply_precedence_and_pipeline_rules above) exist to make

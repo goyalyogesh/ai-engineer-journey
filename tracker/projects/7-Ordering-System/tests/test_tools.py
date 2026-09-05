@@ -1,19 +1,21 @@
-import os
-
-import pytest
-
 from agent.tools import (
     get_order_record,
     get_billing_status,
     get_provisioning_log,
     get_inventory_status,
-    search_knowledge_base,
 )
 
 # real_mock_services (starts the 4 mock services as real uvicorn servers)
 # lives in tests/conftest.py, session-scoped and autouse -- shared with
 # test_specialists.py, which needs the same real services for its own
 # full-stack test.
+#
+# search_knowledge_base's own tests live in tests/test_kb_vector.py
+# (Chroma alone), tests/test_kb_graph.py (Neo4j alone), and
+# tests/test_kb_merged.py (the full tool) -- moved there in Phase 8, since
+# by that phase the tool itself always exercises both vector and graph
+# retrieval together, so testing it here would no longer be "just a tool
+# call" in the same sense as this file's other 4 tools.
 
 
 async def test_get_order_record():
@@ -64,43 +66,6 @@ async def test_get_inventory_status_requires_a_lookup_key():
     result = await get_inventory_status.ainvoke({})
     assert result.success is False
     assert "circuit_id or address" in result.error
-
-
-@pytest.mark.skipif(
-    not os.environ.get("OPENAI_API_KEY"), reason="requires a real OPENAI_API_KEY"
-)
-async def test_search_knowledge_base():
-    result = await search_knowledge_base.ainvoke({"query": "what does ERR_4471 mean?"})
-    assert result.success is True
-    sources = {r["source"] for r in result.data["results"]}
-    assert "err-4471" in sources
-    assert result.data["exact_match_found"] is True
-
-
-async def test_search_knowledge_base_no_match_for_unknown_error_code():
-    # 05-DEVELOPMENT-LOG.md's Phase 6 finding: vector search always
-    # returns its closest documents, even for an error code the KB has
-    # never seen -- exact_match_found is the deterministic signal that
-    # distinguishes "genuine explanation" from "coincidentally closest".
-    result = await search_knowledge_base.ainvoke({"query": "ERR_9999"})
-    assert result.success is True
-    assert result.data["exact_match_found"] is False
-
-
-async def test_search_knowledge_base_exact_match_not_applicable_for_non_code_queries():
-    result = await search_knowledge_base.ainvoke({"query": "why is provisioning slow"})
-    assert result.success is True
-    assert result.data["exact_match_found"] is None
-
-
-async def test_search_knowledge_base_degrades_without_api_key(monkeypatch):
-    # Section 3.6's "unavailable" contract applies here too -- a missing
-    # key must be reported explicitly, never silently treated as "no
-    # results found."
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    result = await search_knowledge_base.ainvoke({"query": "anything"})
-    assert result.success is False
-    assert result.error == "unavailable: OPENAI_API_KEY not configured"
 
 
 async def test_retry_then_unavailable(monkeypatch):

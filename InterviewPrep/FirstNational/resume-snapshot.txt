@@ -1,0 +1,60 @@
+YOGESH GOYAL
+Mississauga, ON ·  647-512-1055 ·  thegoyalyogesh@gmail.com linkedin.com/in/yogeshgoyal
+
+PROFESSIONAL SUMMARY
+Enterprise software engineer with 10+ years delivering complex technical solutions at scale — including Bell Canada (10M+ subscribers) and Microsoft (global partner platform). Now specializing in AI-powered solutions engineering: building production applications with Python, LangChain, Claude API, and AWS. Track record of rapid prototyping, cross-functional delivery, and translating ambiguous business requirements into working software. 
+
+AI PROJECTS
+Order Diagnosis Agent
+Python · FastAPI · LangChain · Open AI API · React · AWS
+A multi-agent AI system that autonomously diagnoses stuck telecom service orders by building integrations across CRM, billing, provisioning, and network inventory system APIs, then producing a structured, evidence-cited root-cause diagnosis. Implemented with LangGraph (a supervisor + 2 specialist sub-agents), FastAPI, and a RAG-backed knowledge base, with a custom 21-scenario evaluation harness, structured observability, and a live UI. 
+SKILLS
+AI / ML
+Python, Claude API, OpenAI API, LangChain, LangGraph, RAG, ChromaDB, AWS Bedrock, Prompt Engineering, FastAPI, Evals
+Backend
+ASP.NET MVC, REST APIs, C#, Web Services, SSIS, ADO.NET, Entity Framework
+Frontend
+React, Vue.js, JavaScript, Tailwind CSS, shadcn/ui, TypeScript, HTML/CSS, jQuery
+Cloud
+AWS (S3, EC2, Lambda, API Gateway, DynamoDB, Bedrock,), Azure
+Data
+SQL Server, DynamoDB, ChromaDB, PostgreSQL, LINQ, Stored Procedures
+Tools
+Git, Azure DevOps, CI/CD, Visual Studio, JIRA
+Methods
+Agile/Scrum, POC Development, RFP Preparation, Cross-functional Team Leadership
+
+PROFESSIONAL EXPERIENCE
+Bell Canada — Mississauga, ON, Canada
+AI Engineer · Jan 2022 – Present
+Built and ran a 21-scenario evaluation harness against the live system (LLM-as-judge grading, precision/recall, false-confidence rate) that surfaced and fixed a real reliability bug — an unrecognized error code being confidently misdiagnosed — improving the system's "admit uncertainty instead of guessing" recall from 0% to 100%.
+Designed production RAG pipelines with LangChain, OpenAI GPT-4, and vector databases (Pinecone, ChromaDB), delivering context-aware assistants at 92% retrieval accuracy
+Deployed containerized AI inference and API services on AWS (Bedrock, Lambda, ECS) using Docker and Kubernetes with automated CI/CD via GitHub Actions
+Built debugging and observability tooling — monitoring, structured logging, and operational controls — for GenAI services to improve reliability, support incident triage, and accelerate performance tuning
+Documented API contracts and operational runbooks for partner developers; collaborated with business and technology teams to translate assurance/provisioning requirements into production API integrations
+Hands-on Generative AI and Agentic AI development: designed and built AI-powered product prototypes covering multi-agent orchestration, RAG pipelines, and LLM-integrated backend services using LangChain, LangGraph, and MCP
+Team SI — Little Rock, AR, USA
+Senior Software Developer · October 2016 – Jan 2022
+Led cross-functional development team delivering digital platforms across healthcare (chistvincent.com) and agricultural equipment (kubotausa.com, redlinequipment.com) verticals
+Designed and built overnight data sync pipeline between client CMS and customer-facing front-end — enabling real-time content updates without manual intervention
+Owned work estimation, sprint planning, and direct client communication across 3 concurrent projects simultaneously
+Implemented CI/CD automation on Azure DevOps, reducing release cycle from multi-day manual deployments to same-day automated releases
+Built reusable ReactJs /Vue.js component library shared across all 3 client projects, significantly cutting front-end development time
+Berkadia Services India Pvt. Ltd.  —  Hyderabad, India
+.NET Developer  ·  July 2014 – October 2015
+Built Loan View Management System — a single-pane-of-glass platform for partners to track loans from origination through current status, replacing a fragmented multi-system workflow
+Designed REST APIs, Entity Framework data layer, and 20+ SQL Server stored procedures supporting real-time financial data access for external partners
+Integrated Azure Queue framework for async processing of loan update events, decoupling data ingestion from display and improving system resilience
+Infosys Ltd.  —  Hyderabad, India  (Client: Microsoft Corp., Redmond WA)
+Senior Systems Engineer  ·  September 2011 – July 2014
+Deployed as technical engineer for Microsoft CHIP (Channel Incentive Program) — Microsoft's global platform managing partner compensation across product types, geographies, and segments
+Served as primary liaison between development and QA teams as part of the Build Engineering team, coordinating technical handoffs and release readiness across global time zones
+Developed complex SSIS packages consuming and transforming data from multiple upstream systems into CHIP's unified compensation model
+Authored training documentation and delivered knowledge transfer sessions to onboard new team members and transition ownership of critical modules
+
+EDUCATION
+Master of Science, Computer Science
+Maharishi University of Management, Fairfield, Iowa  ·  2017
+Bachelor of Technology, Information Technology
+Institute of Technology and Management, Gurgaon, India  ·  2011
+
